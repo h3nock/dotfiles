@@ -3,6 +3,7 @@ alt - j : yabai -m window --focus south
 alt - k : yabai -m window --focus north
 alt - h : yabai -m window --focus west
 alt - l : yabai -m window --focus east
+alt - 0x2A : yabai -m window --focus recent
 
 # swap windows (keep tiling tree but exchange nodes)
 shift + alt - h: yabai -m window --swap west
@@ -69,7 +70,7 @@ ctrl + alt - k : yabai -m window --move rel:0:-50
 ctrl + alt - l : yabai -m window --move rel:50:0
 
 # toggle ChatGPT
-alt - space : osascript -e 'tell application "ChatGPT" to activate'
+alt - space : ~/dotfiles/scripts/scripts/toggle-chatgpt
 
 # stop/start/restart yabai
 ctrl + alt - q : brew services stop yabai
