@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Get the name of the currently focused application
+FRONT_APP=$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true')
+
+if [ "$FRONT_APP" == "ChatGPT" ]; then
+    # If ChatGPT is focused, hide it
+    osascript -e 'tell application "System Events" to set visible of process "ChatGPT" to false'
+else
+    # If ChatGPT is NOT focused
+    # Get its Window ID from Yabai to move it
+    WINDOW_ID=$(yabai -m query --windows | jq -r '.[] | select(.app == "ChatGPT") | .id')
+
+    if [ -z "$WINDOW_ID" ]; then
+         # Not running, open it
+         open -a "ChatGPT"
+    else
+         # Running but not focused. Move to current space and show.
+         CURRENT_SPACE=$(yabai -m query --spaces --space | jq -r '.index')
+
+         yabai -m window "$WINDOW_ID" --space "$CURRENT_SPACE"
+         yabai -m window "$WINDOW_ID" --deminimize "$WINDOW_ID" 2>/dev/null || true
+         yabai -m window "$WINDOW_ID" --float on
+         yabai -m window "$WINDOW_ID" --focus
+    fi
+fi
