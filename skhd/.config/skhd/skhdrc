@@ -69,7 +69,7 @@ ctrl + alt - k : yabai -m window --move rel:0:-50
 ctrl + alt - l : yabai -m window --move rel:50:0
 
 # toggle ChatGPT
-alt - c : open -a "ChatGPT"
+alt - space : osascript -e 'tell application "ChatGPT" to activate'
 
 # stop/start/restart yabai
 ctrl + alt - q : brew services stop yabai
