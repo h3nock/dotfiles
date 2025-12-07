@@ -61,6 +61,16 @@ ctrl + shift + alt - 4 : yabai -m window --space 4; sleep 0.12; yabai -m space -
 ctrl + shift + alt - 5 : yabai -m window --space 5; sleep 0.12; yabai -m space --focus 5
 ctrl + shift + alt - 6 : yabai -m window --space 6; sleep 0.12; yabai -m space --focus 6
 
+# floating window controls
+shift + alt - space : yabai -m window --toggle float
+ctrl + alt - h : yabai -m window --move rel:-50:0
+ctrl + alt - j : yabai -m window --move rel:0:50
+ctrl + alt - k : yabai -m window --move rel:0:-50
+ctrl + alt - l : yabai -m window --move rel:50:0
+
+# toggle ChatGPT
+alt - c : open -a "ChatGPT"
+
 # stop/start/restart yabai
 ctrl + alt - q : brew services stop yabai
 ctrl + alt - s : brew services start yabai
