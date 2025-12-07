@@ -38,3 +38,6 @@ yabai -m rule --add app="^Spotify$" manage=off
 yabai -m rule --add app="^Telegram$" manage=off
 yabai -m rule --add app="^Finder$" manage=off
 yabai -m rule --add app="^TickTick$" manage=off
+
+yabai -m rule --add app="^ChatGPT$" manage=off
+
