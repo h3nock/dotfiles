@@ -28,13 +28,13 @@ return {
               "-O2",
               "-Wall",
               "-o",
-              "$(FNOEXT)",
+              "$(FNOEXT).out",
               "$(FNAME)",
             },
           },
         },
         run_command = {
-          cpp = { exec = "./$(FNOEXT)" },
+          cpp = { exec = "./$(FNOEXT).out" },
         },
 
         -- ──────────────────────────────────────────────────────────────────────

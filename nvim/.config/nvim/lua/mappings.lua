@@ -104,10 +104,15 @@ map("n", "<leader>r", function()
       cmd = "python3 " .. fn.shellescape(file)
     end
   elseif ft == "c" then
-    cmd = string.format("gcc %s -o %s && ./%s", fn.shellescape(file), fn.shellescape(base), fn.shellescape(base))
-  elseif ft == "cpp" then
     cmd =
-      string.format("g++ -std=c++17 %s -o %s && ./%s", fn.shellescape(file), fn.shellescape(base), fn.shellescape(base))
+      string.format("gcc %s -o %s.out && ./%s.out", fn.shellescape(file), fn.shellescape(base), fn.shellescape(base))
+  elseif ft == "cpp" then
+    cmd = string.format(
+      "g++ -std=c++17 %s -o %s.out && ./%s.out",
+      fn.shellescape(file),
+      fn.shellescape(base),
+      fn.shellescape(base)
+    )
   elseif ft == "go" then
     cmd = "go run " .. fn.shellescape(file)
   elseif ft == "rust" then
