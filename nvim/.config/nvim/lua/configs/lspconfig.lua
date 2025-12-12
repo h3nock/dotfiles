@@ -1,7 +1,6 @@
 -- ~/.config/nvim/lua/configs/lspconfig.lua
 require("nvchad.configs.lspconfig").defaults()
 
-local lspconfig = require "lspconfig"
 local nvlsp = require "nvchad.configs.lspconfig"
 
 local servers = { "pyright", "ts_ls", "lua_ls", "gopls" }
@@ -52,10 +51,8 @@ local on_attach = function(client, bufnr)
   end
 end
 
-vim.lsp.enable(servers)
-
 -- Enhanced Pyright for better Python IntelliSense
-lspconfig.pyright.setup {
+vim.lsp.config.pyright = {
   on_attach = on_attach,
   on_init = nvlsp.on_init,
   capabilities = capabilities,
@@ -74,7 +71,7 @@ lspconfig.pyright.setup {
 }
 
 -- TypeScript with function completion
-lspconfig.ts_ls.setup {
+vim.lsp.config.ts_ls = {
   on_attach = on_attach,
   on_init = nvlsp.on_init,
   capabilities = capabilities,
@@ -89,7 +86,7 @@ lspconfig.ts_ls.setup {
 }
 
 -- Lua with essential Neovim globals
-lspconfig.lua_ls.setup {
+vim.lsp.config.lua_ls = {
   on_attach = on_attach,
   on_init = nvlsp.on_init,
   capabilities = capabilities,
@@ -111,7 +108,7 @@ lspconfig.lua_ls.setup {
 }
 
 -- Go with essential features
-lspconfig.gopls.setup {
+vim.lsp.config.gopls = {
   on_attach = on_attach,
   on_init = nvlsp.on_init,
   capabilities = capabilities,
@@ -123,6 +120,11 @@ lspconfig.gopls.setup {
     },
   },
 }
+
+-- Enable all servers
+for _, server in ipairs(servers) do
+  vim.lsp.enable(server)
+end
 
 -- Better diagnostic display
 vim.diagnostic.config {
