@@ -27,8 +27,13 @@ bindkey -M viins '^E' autosuggest-accept
 # --- Custom Aliases ---
 
 # Editor & compiler 
+alias gcc="gcc-15"
 alias g++="g++-15"
 alias vim="nvim"
+
+# alias for the C preprocessor and other tools
+alias cc='gcc-15'
+alias cpp='cpp-15'
 
 # CP (Competitive Programming) aliases
 source "$HOME/cp/scripts/aliases.zsh"
