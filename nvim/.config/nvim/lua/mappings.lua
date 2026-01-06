@@ -85,6 +85,16 @@ local function rust_run_cmd(file_abs)
   end
 end
 
+-- helper: build compile+run command for C/C++ using relative paths
+local function c_cpp_run_cmd(compiler, std_flag)
+  local dir = fn.expand "%:p:h" -- directory containing the file
+  local src = fn.expand "%:t" -- source filename (e.g., neuron.c)
+  local out = fn.expand "%:t:r" .. ".out" -- output filename (e.g., neuron.out)
+  local compile = std_flag and string.format("%s %s %s -o %s", compiler, std_flag, fn.shellescape(src), fn.shellescape(out))
+    or string.format("%s %s -o %s", compiler, fn.shellescape(src), fn.shellescape(out))
+  return string.format("cd %s && %s && ./%s", fn.shellescape(dir), compile, fn.shellescape(out))
+end
+
 -- Run or compile+run current file in a floating terminal
 map("n", "<leader>r", function()
   -- save buffer
@@ -92,7 +102,6 @@ map("n", "<leader>r", function()
 
   local ft = vim.bo.filetype
   local file = fn.expand "%:p" -- full path to current file
-  local base = fn.expand "%:r" -- filename without extension
   local cmd
 
   if ft == "python" then
@@ -104,19 +113,13 @@ map("n", "<leader>r", function()
       cmd = "python3 " .. fn.shellescape(file)
     end
   elseif ft == "c" then
-    cmd =
-      string.format("gcc %s -o %s.out && ./%s.out", fn.shellescape(file), fn.shellescape(base), fn.shellescape(base))
+    cmd = c_cpp_run_cmd("gcc", nil)
   elseif ft == "cpp" then
-    cmd = string.format(
-      "g++ -std=c++17 %s -o %s.out && ./%s.out",
-      fn.shellescape(file),
-      fn.shellescape(base),
-      fn.shellescape(base)
-    )
+    cmd = c_cpp_run_cmd("g++", "-std=c++17")
   elseif ft == "go" then
     cmd = "go run " .. fn.shellescape(file)
   elseif ft == "rust" then
-    cmd = rust_run_cmd(file, base)
+    cmd = rust_run_cmd(file)
   else
     vim.notify("No runner defined for filetype: " .. ft, vim.log.levels.WARN)
     return
