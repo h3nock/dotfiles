@@ -85,13 +85,39 @@ local function rust_run_cmd(file_abs)
   end
 end
 
+-- helper: get OS-appropriate include/lib paths
+local function get_system_flags()
+  if fn.has "mac" == 1 then
+    if fn.isdirectory "/opt/homebrew" == 1 then
+      return "-I/opt/homebrew/include -L/opt/homebrew/lib"
+    elseif fn.isdirectory "/usr/local/Cellar" == 1 then
+      return "-I/usr/local/include -L/usr/local/lib"
+    end
+  elseif fn.has "unix" == 1 then
+    if fn.isdirectory "/usr/local/include" == 1 then
+      return "-I/usr/local/include -L/usr/local/lib"
+    end
+  end
+  return ""
+end
+
 -- helper: build compile+run command for C/C++ using relative paths
+-- priority: Makefile > simple compile
 local function c_cpp_run_cmd(compiler, std_flag)
-  local dir = fn.expand "%:p:h" -- directory containing the file
-  local src = fn.expand "%:t" -- source filename (e.g., neuron.c)
-  local out = fn.expand "%:t:r" .. ".out" -- output filename (e.g., neuron.out)
-  local compile = std_flag and string.format("%s %s %s -o %s", compiler, std_flag, fn.shellescape(src), fn.shellescape(out))
-    or string.format("%s %s -o %s", compiler, fn.shellescape(src), fn.shellescape(out))
+  local dir = fn.expand "%:p:h"
+  local src = fn.expand "%:t"
+  local out = fn.expand "%:t:r" .. ".out"
+
+  -- check for Makefile - use make if present
+  local makefile = vim.fs.find({ "Makefile", "makefile" }, { path = dir, type = "file" })[1]
+  if makefile and vim.fs.dirname(makefile) == dir then
+    return string.format("cd %s && make run", fn.shellescape(dir))
+  end
+
+  -- simple compile with OS specific paths
+  local sys_flags = get_system_flags()
+  local flags = std_flag and (std_flag .. " " .. sys_flags) or sys_flags
+  local compile = string.format("%s %s %s -o %s", compiler, flags, fn.shellescape(src), fn.shellescape(out))
   return string.format("cd %s && %s && ./%s", fn.shellescape(dir), compile, fn.shellescape(out))
 end
 
