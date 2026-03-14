@@ -19,6 +19,27 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "rust" },
+  callback = function()
+    vim.opt_local.colorcolumn = "100"
+  end,
+})
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "python" },
+  callback = function()
+    vim.opt_local.colorcolumn = "88"
+  end,
+})
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "lua" },
+  callback = function()
+    vim.opt_local.colorcolumn = "120"
+  end,
+})
+
 -- show relative line numbers
 opt.relativenumber = true
 
