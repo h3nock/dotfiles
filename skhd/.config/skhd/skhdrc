@@ -55,12 +55,12 @@ ctrl - 5 : yabai -m space --focus 5
 ctrl - 6 : yabai -m space --focus 6
 
 # move focused window to specific space, then follow (adds tiny delay to avoid races)
-ctrl + shift + alt - 1 : yabai -m window --space 1; sleep 0.12; yabai -m space --focus 1
-ctrl + shift + alt - 2 : yabai -m window --space 2; sleep 0.12; yabai -m space --focus 2
-ctrl + shift + alt - 3 : yabai -m window --space 3; sleep 0.12; yabai -m space --focus 3
-ctrl + shift + alt - 4 : yabai -m window --space 4; sleep 0.12; yabai -m space --focus 4
-ctrl + shift + alt - 5 : yabai -m window --space 5; sleep 0.12; yabai -m space --focus 5
-ctrl + shift + alt - 6 : yabai -m window --space 6; sleep 0.12; yabai -m space --focus 6
+ctrl + shift + alt - 1 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 1; sleep 0.20; yabai -m space --focus 1; sleep 0.10; yabai -m window --focus "$wid"
+ctrl + shift + alt - 2 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 2; sleep 0.20; yabai -m space --focus 2; sleep 0.10; yabai -m window --focus "$wid"
+ctrl + shift + alt - 3 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 3; sleep 0.20; yabai -m space --focus 3; sleep 0.10; yabai -m window --focus "$wid"
+ctrl + shift + alt - 4 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 4; sleep 0.20; yabai -m space --focus 4; sleep 0.10; yabai -m window --focus "$wid"
+ctrl + shift + alt - 5 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 5; sleep 0.20; yabai -m space --focus 5; sleep 0.10; yabai -m window --focus "$wid"
+ctrl + shift + alt - 6 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 6; sleep 0.20; yabai -m space --focus 6; sleep 0.10; yabai -m window --focus "$wid"
 
 # floating window controls
 shift + alt - space : yabai -m window --toggle float
