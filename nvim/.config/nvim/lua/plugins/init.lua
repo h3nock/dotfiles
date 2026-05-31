@@ -61,6 +61,7 @@ local plugins = {
         "stylua",
         "gofumpt",
         "goimports",
+        "golines",
         -- LSPs are optional here, but harmless if you want them managed too:
         -- "pyright", "gopls", "rust-analyzer", "clangd", "lua-language-server", "json-lsp", "yaml-language-server",
       },

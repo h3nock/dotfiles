@@ -2,6 +2,17 @@ require "nvchad.options"
 
 local opt = vim.opt
 
+-- Ensure external formatter binaries are discoverable in every Neovim session.
+local path_sep = ":"
+local mason_bin = vim.fn.stdpath "data" .. "/mason/bin"
+local go_bin = vim.fn.expand "$HOME/go/bin"
+
+for _, bin in ipairs({ mason_bin, go_bin }) do
+  if vim.fn.isdirectory(bin) == 1 and not string.find(vim.env.PATH, bin, 1, true) then
+    vim.env.PATH = vim.env.PATH .. path_sep .. bin
+  end
+end
+
 vim.filetype.add({
   extension = {
     mdx = "mdx",
@@ -16,6 +27,18 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.opt_local.conceallevel = 2
     vim.opt_local.concealcursor = "nc"
     vim.treesitter.language.register("markdown", "mdx")
+  end,
+})
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "go", "gomod", "gowork", "gotmpl" },
+  callback = function()
+    vim.opt_local.expandtab = false
+    vim.opt_local.tabstop = 4
+    vim.opt_local.shiftwidth = 4
+    vim.opt_local.softtabstop = 4
+    vim.opt_local.textwidth = 100
+    vim.opt_local.colorcolumn = "100"
   end,
 })
 
