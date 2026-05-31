@@ -41,3 +41,4 @@ yabai -m rule --add app="^TickTick$" manage=off
 
 yabai -m rule --add app="^ChatGPT$" state=floating manage=on
 
+[ -r "$HOME/.yabairc.local" ] && source "$HOME/.yabairc.local"
