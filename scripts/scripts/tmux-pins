@@ -1,0 +1,311 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+state_file="${TMUX_PINS_FILE:-${XDG_DATA_HOME:-$HOME/.local/share}/tmux-pins/pins.tsv}"
+
+ensure_state_dir() {
+    mkdir -p "$(dirname "$state_file")"
+}
+
+display_tmux_message() {
+    if [ -n "${TMUX:-}" ]; then
+        tmux display-message "$1"
+    else
+        printf '%s\n' "$1" >&2
+    fi
+}
+
+clean_field() {
+    printf '%s' "$1" | tr '\t\r\n' '   ' | sed 's/[[:space:]][[:space:]]*/ /g; s/^ //; s/ $//'
+}
+
+tmux_format() {
+    local pane_id="$1"
+    local format="$2"
+
+    tmux display-message -p -t "$pane_id" "$format"
+}
+
+pin_add() {
+    local pane_id="${1:-}"
+
+    if [ -z "$pane_id" ]; then
+        display_tmux_message "tmux pins: missing pane id"
+        exit 1
+    fi
+
+    local session_id window_id pane_current_path history_size scroll_position copy_cursor_y excerpt
+    session_id="$(tmux_format "$pane_id" '#{session_id}')"
+    window_id="$(tmux_format "$pane_id" '#{window_id}')"
+    pane_current_path="$(tmux_format "$pane_id" '#{pane_current_path}')"
+    history_size="$(tmux_format "$pane_id" '#{history_size}')"
+    scroll_position="$(tmux_format "$pane_id" '#{scroll_position}')"
+    copy_cursor_y="$(tmux_format "$pane_id" '#{copy_cursor_y}')"
+    excerpt="$(clean_field "$(tmux_format "$pane_id" '#{copy_cursor_line}')")"
+
+    if [ -z "$copy_cursor_y" ] || [ -z "$excerpt" ]; then
+        display_tmux_message "tmux pins: move the copy-mode cursor onto a non-empty line first"
+        exit 1
+    fi
+
+    local absolute_line id created_epoch created_display
+    absolute_line=$((copy_cursor_y + history_size - scroll_position))
+    id="$(date +%Y%m%d%H%M%S)-$$-${RANDOM:-0}"
+    created_epoch="$(date +%s)"
+    created_display="$(date '+%m/%d %H:%M')"
+
+    ensure_state_dir
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+        "$id" \
+        "0" \
+        "$created_epoch" \
+        "$created_display" \
+        "$session_id" \
+        "$window_id" \
+        "$pane_id" \
+        "$absolute_line" \
+        "$(clean_field "$pane_current_path")" \
+        "$excerpt" \
+        "" >> "$state_file"
+
+    display_tmux_message "tmux pins: pinned ${excerpt:0:80}"
+}
+
+find_pin() {
+    local wanted_id="$1"
+    local line
+
+    [ -f "$state_file" ] || return 1
+
+    while IFS= read -r line; do
+        IFS=$'\t' read -r pin_id pin_done pin_created_epoch pin_created_display pin_session_id pin_window_id pin_pane_id pin_absolute_line pin_path pin_excerpt pin_reserved <<< "$line"
+        if [ "$pin_id" = "$wanted_id" ]; then
+            return 0
+        fi
+    done < "$state_file"
+
+    return 1
+}
+
+pin_rows() {
+    local line status target
+
+    [ -f "$state_file" ] || return 0
+
+    while IFS= read -r line; do
+        IFS=$'\t' read -r pin_id pin_done pin_created_epoch pin_created_display pin_session_id pin_window_id pin_pane_id pin_absolute_line pin_path pin_excerpt pin_reserved <<< "$line"
+
+        if [ "$pin_done" = "1" ]; then
+            status="[x]"
+        else
+            status="[ ]"
+        fi
+
+        target="${pin_session_id}/${pin_window_id}/${pin_pane_id}"
+        printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$pin_id" "$status" "$pin_created_display" "$target" "$pin_path" "$pin_excerpt"
+    done < "$state_file"
+}
+
+pin_preview() {
+    local wanted_id="${1:-}"
+
+    if ! find_pin "$wanted_id"; then
+        printf 'Pin not found.\n'
+        exit 0
+    fi
+
+    printf 'Pinned message\n'
+    printf -- '--------------\n'
+    printf 'Status: %s\n' "$([ "$pin_done" = "1" ] && printf done || printf open)"
+    printf 'Time:   %s\n' "$pin_created_display"
+    printf 'Target: %s / %s / %s\n' "$pin_session_id" "$pin_window_id" "$pin_pane_id"
+    printf 'Path:   %s\n' "$pin_path"
+    printf 'Line:   %s\n\n' "$pin_absolute_line"
+    printf '%s\n\n' "$pin_excerpt"
+    printf 'Actions\n'
+    printf -- '-------\n'
+    printf 'enter  jump to pin\n'
+    printf 'ctrl-x toggle done\n'
+    printf 'ctrl-d delete pin\n\n'
+
+    if ! tmux display-message -p -t "$pin_pane_id" '#{pane_id}' >/dev/null 2>&1; then
+        printf 'Live context unavailable: pane no longer exists.\n'
+        exit 0
+    fi
+
+    local current_history_size start_line end_line
+    current_history_size="$(tmux_format "$pin_pane_id" '#{history_size}')"
+    start_line=$((pin_absolute_line - current_history_size - 3))
+    end_line=$((pin_absolute_line - current_history_size + 3))
+
+    if [ "$start_line" -lt "-$current_history_size" ]; then
+        printf 'Live context unavailable: line has rolled out of tmux history.\n'
+        exit 0
+    fi
+
+    printf 'Live context\n'
+    printf -- '------------\n'
+    tmux capture-pane -p -t "$pin_pane_id" -S "$start_line" -E "$end_line" 2>/dev/null || \
+        printf 'Unable to capture live context.\n'
+}
+
+pin_jump() {
+    local wanted_id="${1:-}"
+
+    if ! find_pin "$wanted_id"; then
+        display_tmux_message "tmux pins: pin not found"
+        exit 1
+    fi
+
+    if ! tmux display-message -p -t "$pin_pane_id" '#{pane_id}' >/dev/null 2>&1; then
+        display_tmux_message "tmux pins: target pane no longer exists"
+        exit 1
+    fi
+
+    local current_history_size pane_height total_lines jump_count capture_line live_excerpt
+    current_history_size="$(tmux_format "$pin_pane_id" '#{history_size}')"
+    pane_height="$(tmux_format "$pin_pane_id" '#{pane_height}')"
+    total_lines=$((current_history_size + pane_height))
+
+    if [ "$pin_absolute_line" -ge "$total_lines" ]; then
+        display_tmux_message "tmux pins: pinned line is no longer in tmux history"
+        exit 1
+    fi
+
+    capture_line=$((pin_absolute_line - current_history_size))
+    live_excerpt="$(tmux capture-pane -p -t "$pin_pane_id" -S "$capture_line" -E "$capture_line" 2>/dev/null | sed 's/[[:space:]][[:space:]]*/ /g; s/^ //; s/ $//')"
+
+    tmux switch-client -t "$pin_session_id" 2>/dev/null || true
+    tmux select-window -t "$pin_window_id"
+    tmux select-pane -t "$pin_pane_id"
+    tmux copy-mode -t "$pin_pane_id"
+    tmux send-keys -t "$pin_pane_id" -X history-top
+
+    jump_count="$pin_absolute_line"
+    if [ "$jump_count" -gt 0 ]; then
+        tmux send-keys -t "$pin_pane_id" -N "$jump_count" -X cursor-down
+    fi
+
+    if [ -n "$live_excerpt" ] && [ "$live_excerpt" != "$pin_excerpt" ]; then
+        display_tmux_message "tmux pins: jumped, but saved excerpt differs from live line"
+    else
+        display_tmux_message "tmux pins: jumped to pin"
+    fi
+}
+
+rewrite_without_id() {
+    local wanted_id="$1"
+    local temp_file line
+
+    ensure_state_dir
+    temp_file="$(mktemp "${state_file}.XXXXXX")"
+
+    if [ -f "$state_file" ]; then
+        while IFS= read -r line; do
+            IFS=$'\t' read -r pin_id pin_done pin_created_epoch pin_created_display pin_session_id pin_window_id pin_pane_id pin_absolute_line pin_path pin_excerpt pin_reserved <<< "$line"
+            if [ "$pin_id" != "$wanted_id" ]; then
+                printf '%s\n' "$line" >> "$temp_file"
+            fi
+        done < "$state_file"
+    fi
+
+    mv "$temp_file" "$state_file"
+}
+
+pin_delete() {
+    local wanted_id="${1:-}"
+
+    [ -n "$wanted_id" ] || exit 0
+    rewrite_without_id "$wanted_id"
+}
+
+pin_toggle() {
+    local wanted_id="${1:-}"
+    local temp_file line next_done
+
+    [ -n "$wanted_id" ] || exit 0
+
+    ensure_state_dir
+    temp_file="$(mktemp "${state_file}.XXXXXX")"
+
+    if [ -f "$state_file" ]; then
+        while IFS= read -r line; do
+            IFS=$'\t' read -r pin_id pin_done pin_created_epoch pin_created_display pin_session_id pin_window_id pin_pane_id pin_absolute_line pin_path pin_excerpt pin_reserved <<< "$line"
+            if [ "$pin_id" = "$wanted_id" ]; then
+                if [ "$pin_done" = "1" ]; then
+                    next_done="0"
+                else
+                    next_done="1"
+                fi
+                printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+                    "$pin_id" "$next_done" "$pin_created_epoch" "$pin_created_display" "$pin_session_id" \
+                    "$pin_window_id" "$pin_pane_id" "$pin_absolute_line" "$pin_path" "$pin_excerpt" "$pin_reserved" >> "$temp_file"
+            else
+                printf '%s\n' "$line" >> "$temp_file"
+            fi
+        done < "$state_file"
+    fi
+
+    mv "$temp_file" "$state_file"
+}
+
+pin_list() {
+    local script_path
+    script_path="${BASH_SOURCE[0]}"
+
+    ensure_state_dir
+    touch "$state_file"
+
+    if ! command -v fzf >/dev/null 2>&1; then
+        display_tmux_message "tmux pins: fzf is not installed"
+        exit 1
+    fi
+
+    if ! [ -s "$state_file" ]; then
+        display_tmux_message "tmux pins: no pins yet"
+        exit 0
+    fi
+
+    pin_rows | fzf \
+        --ansi \
+        --delimiter=$'\t' \
+        --with-nth='2,3,4,6' \
+        --prompt='pins> ' \
+        --header='enter jump | ctrl-x done | ctrl-d delete | esc close' \
+        --preview="$script_path preview {1}" \
+        --preview-window='right:55%:wrap' \
+        --bind="enter:become($script_path jump {1})" \
+        --bind="ctrl-x:execute-silent($script_path toggle {1})+reload($script_path rows)" \
+        --bind="ctrl-d:execute-silent($script_path delete {1})+reload($script_path rows)"
+}
+
+command="${1:-list}"
+shift || true
+
+case "$command" in
+    add)
+        pin_add "$@"
+        ;;
+    rows)
+        pin_rows
+        ;;
+    preview)
+        pin_preview "$@"
+        ;;
+    jump)
+        pin_jump "$@"
+        ;;
+    delete)
+        pin_delete "$@"
+        ;;
+    toggle)
+        pin_toggle "$@"
+        ;;
+    list)
+        pin_list
+        ;;
+    *)
+        printf 'Usage: tmux-pins {add|list|rows|preview|jump|delete|toggle}\n' >&2
+        exit 2
+        ;;
+esac
