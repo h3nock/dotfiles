@@ -1,5 +1,5 @@
 font-family = "JetBrains Mono"
 font-family = "MesloLGS NF"
 font-size = 16
-background-opacity = 0.9
-background-blur = 20
+background-opacity = 0.94
+background-blur = 32
