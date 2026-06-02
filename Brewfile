@@ -9,6 +9,7 @@ brew "fzf"                    # Fuzzy finder - essential for workflow
 brew "ripgrep"                # Fast grep alternative
 brew "tree"                   # Directory tree visualization
 brew "tmux"                   # Terminal multiplexer
+brew "btop"                   # Terminal resource monitor
 brew "neovim"                 # Your primary editor
 brew "zoxide"                 # Smart cd replacement
 brew "stow"                   # GNU Stow for dotfiles management 

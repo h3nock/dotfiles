@@ -33,9 +33,9 @@ stow_dotfiles() {
     echo "Stowing dotfiles..."
     PACKAGES_TO_STOW=()
     if [[ "$(uname)" == "Darwin" ]]; then
-        PACKAGES_TO_STOW=(zsh nvim tmux karabiner skhd yabai ghostty scripts)
+        PACKAGES_TO_STOW=(zsh nvim tmux btop karabiner skhd yabai ghostty scripts)
     elif [[ "$(uname)" == "Linux" ]]; then
-        PACKAGES_TO_STOW=(zsh nvim tmux scripts)
+        PACKAGES_TO_STOW=(zsh nvim tmux btop scripts)
     fi
 
     # pre-stow check for conflicts and backup existing files

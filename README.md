@@ -57,6 +57,7 @@ The `install.sh` script can be used in two ways:
 - `ripgrep` (a better `grep`).
 - `zoxide` (a smarter `cd` command).
 - `tmux` (a terminal multiplexer).
+- `btop` (a terminal resource monitor).
 - And many more (see the `Brewfile`).
 
 ### Applications
