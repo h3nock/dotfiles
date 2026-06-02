@@ -33,6 +33,7 @@ M.base46 = {
 
 M.ui = {
   statusline = {
+    separator_style = "block",
     order = { "mode", "file", "git", "%=", "diagnostics", "cursor" },
     modules = {
       cursor = "%#St_pos_icon#  %#St_pos_text# %l/%v ",
