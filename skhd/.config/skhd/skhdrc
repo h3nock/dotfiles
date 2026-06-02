@@ -70,9 +70,6 @@ ctrl + alt - j : yabai -m window --move rel:0:50
 ctrl + alt - k : yabai -m window --move rel:0:-50
 ctrl + alt - l : yabai -m window --move rel:50:0
 
-# toggle ChatGPT
-alt - space : ~/dotfiles/scripts/scripts/toggle-chatgpt
-
 # stop/start/restart yabai
 ctrl + alt - q : yabai --stop-service
 ctrl + alt - s : yabai --start-service
