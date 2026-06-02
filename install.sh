@@ -28,6 +28,17 @@ install_packages() {
     fi
 }
 
+configure_macos() {
+    if [[ "$(uname)" != "Darwin" ]]; then
+        return
+    fi
+
+    echo "Enabling native macOS menu bar auto-hide..."
+    if ! osascript -e 'tell application "System Events" to tell dock preferences to set autohide menu bar to true' >/dev/null; then
+        echo "Warning: could not enable menu bar auto-hide. Set System Settings > Control Center > Automatically hide and show the menu bar to Always."
+    fi
+}
+
 # stow operations 
 stow_dotfiles() {
     echo "Stowing dotfiles..."
@@ -51,9 +62,11 @@ stow_dotfiles() {
 
 if [ "$STOW_ONLY" = true ]; then
     echo "Skipping package installation. Stowing dotfiles only..."
+    configure_macos
     stow_dotfiles
 else
     install_packages
+    configure_macos
     stow_dotfiles
 fi
 
