@@ -54,6 +54,9 @@ if command -v bat >/dev/null 2>&1; then
 fi 
 
 if command -v eza >/dev/null 2>&1; then
+  export EZA_CONFIG_DIR="$HOME/.config/eza"
+  unset EZA_COLORS EXA_COLORS LS_COLORS
+
   alias ls='eza --color=auto'
   alias la='eza -alh'
   alias ll='eza -lH'
