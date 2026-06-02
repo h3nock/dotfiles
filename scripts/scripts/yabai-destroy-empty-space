@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+space="$(yabai -m query --spaces --space)"
+index="$(jq -r '.index' <<<"$space")"
+windows="$(jq -r '.windows | length' <<<"$space")"
+
+if [ "$windows" -gt 0 ]; then
+    osascript -e "display notification \"Space $index is not empty ($windows windows)\" with title \"yabai\""
+    exit 1
+fi
+
+yabai -m space "$index" --destroy

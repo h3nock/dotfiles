@@ -19,9 +19,10 @@ alt - 0x1E : yabai -m display --focus east  # ]
 shift + alt - 0x21 : yabai -m window --display west; yabai -m display --focus west;  # [
 shift + alt - 0x1E : yabai -m window --display east; yabai -m display --focus east;  # ]
 
-# move current space in the spaces order
+# move/remove current space
 ctrl + shift + alt - p : yabai -m space --move prev
 ctrl + shift + alt - n : yabai -m space --move next
+ctrl + shift + alt - x : ~/dotfiles/scripts/scripts/yabai-destroy-empty-space
 
 # rotate layout clockwise
 shift + alt - r : yabai -m space --rotate 270
