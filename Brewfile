@@ -1,5 +1,6 @@
 # Essential taps
 tap "jesseduffield/lazygit"
+tap "felixkratz/formulae"
 tap "koekeishiya/formulae"
 
 # Core development tools
@@ -36,6 +37,7 @@ brew "glow"                   # Markdown viewer
 brew "firebase-cli"           # Firebase development
 
 # Window management (since you use these)
+brew "borders"                       # Window borders
 brew "koekeishiya/formulae/skhd"    # Hotkey daemon
 brew "koekeishiya/formulae/yabai"   # Tiling window manager
 
