@@ -55,6 +55,10 @@ ctrl - 4 : yabai -m space --focus 4
 ctrl - 5 : yabai -m space --focus 5
 ctrl - 6 : yabai -m space --focus 6
 
+# focus adjacent spaces
+ctrl - p : yabai -m space --focus prev
+ctrl - n : yabai -m space --focus next
+
 # move focused window to specific space, then follow (adds tiny delay to avoid races)
 ctrl + shift + alt - 1 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 1; sleep 0.20; yabai -m space --focus 1; sleep 0.10; yabai -m window --focus "$wid"
 ctrl + shift + alt - 2 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 2; sleep 0.20; yabai -m space --focus 2; sleep 0.10; yabai -m window --focus "$wid"
