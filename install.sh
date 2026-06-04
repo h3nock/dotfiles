@@ -39,6 +39,15 @@ configure_macos() {
     fi
 }
 
+build_helpers() {
+    if [[ "$(uname)" != "Darwin" ]]; then
+        return
+    fi
+
+    echo "Building local helper binaries..."
+    make -C scripts
+}
+
 # stow operations 
 stow_dotfiles() {
     echo "Stowing dotfiles..."
@@ -63,10 +72,12 @@ stow_dotfiles() {
 if [ "$STOW_ONLY" = true ]; then
     echo "Skipping package installation. Stowing dotfiles only..."
     configure_macos
+    build_helpers
     stow_dotfiles
 else
     install_packages
     configure_macos
+    build_helpers
     stow_dotfiles
 fi
 

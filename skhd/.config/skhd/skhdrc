@@ -3,7 +3,7 @@ alt - j : yabai -m window --focus south
 alt - k : yabai -m window --focus north
 alt - h : yabai -m window --focus west
 alt - l : yabai -m window --focus east
-alt - 0x2A : yabai -m window --focus recent
+alt - u : ~/scripts/yabai-focus-history undo
 
 # swap windows (keep tiling tree but exchange nodes)
 shift + alt - h: yabai -m window --swap west
@@ -60,12 +60,12 @@ ctrl - p : yabai -m space --focus prev
 ctrl - n : yabai -m space --focus next
 
 # move focused window to specific space, then follow (adds tiny delay to avoid races)
-ctrl + shift + alt - 1 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 1; sleep 0.20; yabai -m space --focus 1; sleep 0.10; yabai -m window --focus "$wid"
-ctrl + shift + alt - 2 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 2; sleep 0.20; yabai -m space --focus 2; sleep 0.10; yabai -m window --focus "$wid"
-ctrl + shift + alt - 3 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 3; sleep 0.20; yabai -m space --focus 3; sleep 0.10; yabai -m window --focus "$wid"
-ctrl + shift + alt - 4 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 4; sleep 0.20; yabai -m space --focus 4; sleep 0.10; yabai -m window --focus "$wid"
-ctrl + shift + alt - 5 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 5; sleep 0.20; yabai -m space --focus 5; sleep 0.10; yabai -m window --focus "$wid"
-ctrl + shift + alt - 6 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 6; sleep 0.20; yabai -m space --focus 6; sleep 0.10; yabai -m window --focus "$wid"
+ctrl + shift + alt - 1 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 1; sleep 0.20; yabai -m space --focus 1; sleep 0.10; yabai -m window --focus "$wid"; ~/scripts/yabai-focus-history sync
+ctrl + shift + alt - 2 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 2; sleep 0.20; yabai -m space --focus 2; sleep 0.10; yabai -m window --focus "$wid"; ~/scripts/yabai-focus-history sync
+ctrl + shift + alt - 3 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 3; sleep 0.20; yabai -m space --focus 3; sleep 0.10; yabai -m window --focus "$wid"; ~/scripts/yabai-focus-history sync
+ctrl + shift + alt - 4 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 4; sleep 0.20; yabai -m space --focus 4; sleep 0.10; yabai -m window --focus "$wid"; ~/scripts/yabai-focus-history sync
+ctrl + shift + alt - 5 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 5; sleep 0.20; yabai -m space --focus 5; sleep 0.10; yabai -m window --focus "$wid"; ~/scripts/yabai-focus-history sync
+ctrl + shift + alt - 6 : wid="$(yabai -m query --windows --window | /opt/homebrew/bin/jq -r '.id')"; yabai -m window --space 6; sleep 0.20; yabai -m space --focus 6; sleep 0.10; yabai -m window --focus "$wid"; ~/scripts/yabai-focus-history sync
 
 # floating window controls
 shift + alt - space : yabai -m window --toggle float

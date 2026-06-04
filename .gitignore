@@ -1,3 +1,4 @@
 .DS_Store 
 tmux/.config/tmux/plugins/*
 karabiner/.config/karabiner/automatic_backups/
+scripts/scripts/yabai-focus-history

@@ -2,6 +2,17 @@
 sudo -n /opt/homebrew/bin/yabai --load-sa
 yabai -m signal --add event=dock_did_restart action="sudo -n /opt/homebrew/bin/yabai --load-sa"
 
+# keep a per-space focus history for low-latency "undo focus" hotkeys
+$HOME/scripts/yabai-focus-history sync
+yabai -m signal --remove focus_history_space 2>/dev/null
+yabai -m signal --remove focus_history_window 2>/dev/null
+yabai -m signal --remove focus_history_window_destroyed 2>/dev/null
+yabai -m signal --remove focus_history_space_destroyed 2>/dev/null
+yabai -m signal --add event=space_changed label=focus_history_space action="$HOME/scripts/yabai-focus-history space \$YABAI_SPACE_ID"
+yabai -m signal --add event=window_focused label=focus_history_window action="$HOME/scripts/yabai-focus-history window \$YABAI_WINDOW_ID"
+yabai -m signal --add event=window_destroyed label=focus_history_window_destroyed action="$HOME/scripts/yabai-focus-history remove-window \$YABAI_WINDOW_ID"
+yabai -m signal --add event=space_destroyed label=focus_history_space_destroyed action="$HOME/scripts/yabai-focus-history remove-space \$YABAI_SPACE_ID"
+
 # default layout (can be bsp, stack or float)
 yabai -m config layout bsp
 
