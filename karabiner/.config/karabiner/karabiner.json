@@ -66,7 +66,7 @@
                         ]
                     },
                     {
-                        "description": "Right Arrow as Right Control when held, Arrow when tapped (internal keyboard only)",
+                        "description": "Right Arrow: tap for timed Right Control, hold for repeating Right Arrow (internal keyboard only)",
                         "manipulators": [
                             {
                                 "conditions": [
@@ -82,8 +82,13 @@
                                     }
                                 ],
                                 "from": { "key_code": "right_arrow" },
-                                "to_if_alone": [{ "key_code": "right_arrow" }],
-                                "to_if_held_down": [{ "key_code": "right_control" }],
+                                "to_if_alone": [
+                                    {
+                                        "hold_down_milliseconds": 700,
+                                        "key_code": "right_control"
+                                    }
+                                ],
+                                "to_if_held_down": [{ "key_code": "right_arrow" }],
                                 "type": "basic"
                             }
                         ]
