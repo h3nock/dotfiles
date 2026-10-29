@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# tmux-restore-session NAME: brings back one saved tmux session that isn't running. It hands tmux-resurrect's own
+# restore script just that session's lines from the newest save that has it, so the other saved sessions stay
+# saved and are not started. `ta` in zsh calls it before attaching.
+set -euo pipefail
+
+name=${1:?usage: tmux-restore-session NAME}
+
+# resurrect restores into a running server. Without sessions, start one with a placeholder session "0", which
+# resurrect itself removes when it restores into an otherwise empty server.
+placeholder=
+if ! tmux list-sessions > /dev/null 2>&1; then
+  tmux new-session -d -s 0
+  placeholder=1
+fi
+
+dir=$(tmux show-option -gqv @resurrect-dir)
+if [ -z "$dir" ]; then
+  if [ -d "$HOME/.tmux/resurrect" ]; then
+    dir=$HOME/.tmux/resurrect
+  else
+    dir=${XDG_DATA_HOME:-$HOME/.local/share}/tmux/resurrect
+  fi
+fi
+dir=${dir/#\~/$HOME}
+
+save=
+for file in $(ls -r "$dir"/tmux_resurrect_*.txt 2> /dev/null); do
+  if awk -F'\t' -v s="$name" '$1 == "pane" && $2 == s { found = 1; exit } END { exit !found }' "$file"; then
+    save=$file
+    break
+  fi
+done
+if [ -z "$save" ]; then
+  echo "no saved tmux session named '$name'" >&2
+  if [ -n "$placeholder" ]; then
+    tmux kill-session -t =0
+  fi
+  exit 1
+fi
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+awk -F'\t' -v s="$name" '($1 == "pane" || $1 == "window" || $1 == "grouped_session") && $2 == s' "$save" > "$work/session.txt"
+ln -s session.txt "$work/last"
+if [ -f "$dir/pane_contents.tar.gz" ]; then
+  ln -s "$dir/pane_contents.tar.gz" "$work/pane_contents.tar.gz"
+fi
+
+# resurrect reads its folder only from @resurrect-dir, so point it at the one-session copy for this restore.
+restore=$(tmux show-option -gqv @resurrect-restore-script-path)
+configured=$(tmux show-option -gqv @resurrect-dir)
+tmux set-option -g @resurrect-dir "$work"
+if [ -n "$configured" ]; then
+  trap 'tmux set-option -g @resurrect-dir "$configured"; rm -rf "$work"' EXIT
+else
+  trap 'tmux set-option -gu @resurrect-dir; rm -rf "$work"' EXIT
+fi
+tmux run-shell "$restore"
+tmux has-session -t "=$name"

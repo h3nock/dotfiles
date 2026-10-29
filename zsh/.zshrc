@@ -94,8 +94,16 @@ gac() {
   git add -- "${files[@]}" && git commit -m "$msg"
 }
 
-# tmux alias 
-alias ta='tmux attach -t'
+# tmux alias
+# ta NAME: attach; a session that isn't running is first brought back from its last tmux-resurrect save
+ta() {
+  if [[ $# -eq 0 ]]; then
+    tmux attach
+    return
+  fi
+  tmux has-session -t "$1" 2>/dev/null || ~/scripts/tmux-restore-session "$1" || return
+  tmux attach -t "$@"
+}
 alias tls='tmux ls' 
 alias tks='tmux kill-session -t'
  
