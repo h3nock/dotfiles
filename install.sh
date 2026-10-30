@@ -53,7 +53,7 @@ stow_dotfiles() {
     echo "Stowing dotfiles..."
     PACKAGES_TO_STOW=()
     if [[ "$(uname)" == "Darwin" ]]; then
-        PACKAGES_TO_STOW=(zsh nvim tmux btop bat eza karabiner skhd yabai ghostty scripts)
+        PACKAGES_TO_STOW=(zsh nvim tmux rex btop bat eza karabiner skhd yabai ghostty scripts)
     elif [[ "$(uname)" == "Linux" ]]; then
         PACKAGES_TO_STOW=(zsh nvim tmux btop bat eza scripts)
     fi

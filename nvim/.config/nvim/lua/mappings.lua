@@ -18,11 +18,22 @@ map("n", "+p", '"+p', { desc = "Paste from system clipboard" })
 -- make <Esc> drop you back to Normal-mode from any terminal
 map("t", "<Esc>", "<C-\\><C-n>", { desc = "Terminal: go to Normal mode" })
 
--- Tmux Navigator Mappings
-map("n", "<C-h>", "<cmd>TmuxNavigateLeft<CR>", { desc = "Move to left pane (vim or tmux)" })
-map("n", "<C-j>", "<cmd>TmuxNavigateDown<CR>", { desc = "Move to pane below (vim or tmux)" })
-map("n", "<C-k>", "<cmd>TmuxNavigateUp<CR>", { desc = "Move to pane above (vim or tmux)" })
-map("n", "<C-l>", "<cmd>TmuxNavigateRight<CR>", { desc = "Move to right pane (vim or tmux)" })
+-- Navigate Vim splits and the surrounding tmux or Rex panes.
+for _, navigation in ipairs {
+  { "h", "left", "TmuxNavigateLeft" },
+  { "j", "down", "TmuxNavigateDown" },
+  { "k", "up", "TmuxNavigateUp" },
+  { "l", "right", "TmuxNavigateRight" },
+} do
+  local key, direction, tmux_command = unpack(navigation)
+  map("n", "<C-" .. key .. ">", function()
+    if vim.env.REX_SESSION and vim.env.REX_SERVER and not vim.env.TMUX then
+      require("configs.rex_navigator").navigate(key, direction)
+    else
+      vim.cmd(tmux_command)
+    end
+  end, { desc = "Move " .. direction .. " (Vim, tmux, or Rex)" })
+end
 
 -- Run all testcases (optional):
 map("n", "<leader>tr", "<cmd>CompetiTest run<cr>", { desc = "CompetiTest: run all testcases" })
