@@ -14,7 +14,7 @@ terminal on that Mac**. This installs just the Rex configuration and its tools.
 brew install stow neovim python fzf btop
 
 # Clone once; an existing clone is updated below.
-test -d "$HOME/dotfiles/.git" || git clone https://github.com/henok3878/dotfiles.git "$HOME/dotfiles"
+test -d "$HOME/dotfiles/.git" || git clone https://github.com/h3nock/dotfiles.git "$HOME/dotfiles"
 test -d "$HOME/poplink/.git" || git clone https://github.com/h3nock/poplink.git "$HOME/poplink"
 git -C "$HOME/dotfiles" pull --ff-only
 git -C "$HOME/poplink" pull --ff-only

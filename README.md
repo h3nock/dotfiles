@@ -17,7 +17,7 @@ On a new machine, you can run the following commands to get started:
 xcode-select --install
 
 # Clone the dotfiles repo
-git clone https://github.com/henok3878/dotfiles.git ~/dotfiles
+git clone https://github.com/h3nock/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 
 # Run the full installation
