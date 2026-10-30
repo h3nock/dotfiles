@@ -17,7 +17,7 @@ On a new machine, you can run the following commands to get started:
 xcode-select --install
 
 # Clone the dotfiles repo
-git clone https://github.com/your-username/dotfiles.git ~/dotfiles
+git clone https://github.com/henok3878/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 
 # Run the full installation
@@ -31,6 +31,9 @@ This will automatically:
 - ✅ Create symlinks for all your configuration files using `stow`.
 
 ## Usage
+
+For a focused Rex desktop setup (including Vim copy mode and poplink), follow
+[the Rex setup instructions](rex/README.md) instead of the full installation.
 
 The `install.sh` script can be used in two ways:
 

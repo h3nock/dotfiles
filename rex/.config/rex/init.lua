@@ -21,7 +21,7 @@ bind("z", "pane.zoom")
 bind("x", "client.close")
 bind("shift+7", "client.tab.close") -- &
 bind("shift+1", "pane.move_to_new_tab") -- !
-bind("o", "pane.focus_next")
+bind("tab", "pane.focus_next")
 bind("=", "pane.balance")
 bind("r", "client.config.reload")
 bind("shift+/", "client.palette.toggle") -- ?
@@ -86,13 +86,20 @@ end
 
 -- Rex floating layers replace the notes and activity display-popup bindings.
 -- The process runs in the focused terminal's directory; exiting closes it.
-local function popup(script, bounds)
+local function popup(script, bounds, arguments)
   local process, process_err = rex.block.call(terminal, "process", {})
   if not process then
     error(process_err, 0)
   end
   local foreground = process.foreground or process.child or {}
   local cwd = foreground.cwd or process.home
+  local command = { "/bin/zsh", "-lc", script }
+  if arguments then
+    command[#command + 1] = "rex-popup" -- $0; arguments start at $1.
+    for _, argument in ipairs(arguments) do
+      command[#command + 1] = argument
+    end
+  end
   local layer, err = rex.session.new_layer {
     bounds = bounds,
     focus = true,
@@ -100,7 +107,7 @@ local function popup(script, bounds)
       flavor = "com.superlogical.terminal.shell",
       options = {
         shell = "none",
-        command = { "/bin/zsh", "-lc", script },
+        command = command,
         cwd = cwd,
         exit = { on_completion = true },
       },
@@ -111,6 +118,42 @@ local function popup(script, bounds)
   end
   return layer
 end
+
+rex.action {
+  name = "poplink",
+  title = "Open Path from Output",
+  description = "Pick a file reference from the source terminal with poplink.",
+  run = function(ctx)
+    -- The new floating terminal has its own REX_BLOCK. Pass the original block
+    -- explicitly so poplink captures the source, never its own picker screen.
+    if not ctx.block_id then
+      error("Poplink requires a focused terminal", 0)
+    end
+    return popup(
+      'exec "${POPLINK_BIN:-$HOME/poplink/bin/poplink}" --backend rex --block "$1" --hold-on-error',
+      { 0.04, 0.075, 0.92, 0.85 },
+      { ctx.block_id }
+    )
+  end,
+}
+bind("o", "poplink")
+
+rex.action {
+  name = "vim_copy_mode",
+  title = "Vim Copy Mode",
+  description = "Browse and copy a snapshot of terminal scrollback with Vim keys.",
+  run = function(ctx)
+    if not ctx.block_id then
+      error("Copy mode requires a focused terminal", 0)
+    end
+    return popup(
+      'exec python3 "$HOME/.config/rex/scrollback.py" "$1"',
+      { 0, 0, 1, 1 },
+      { ctx.block_id }
+    )
+  end,
+}
+bind("[", "vim_copy_mode")
 
 rex.action {
   name = "project_notes",
@@ -133,5 +176,5 @@ rex.action {
 }
 bind("shift+a", "activity_monitor")
 
--- Tmux copy-mode, tmux-pins, and TPM plugins do not load in Rex.
+-- Ctrl+A [ uses the snapshot viewer; tmux-pins and TPM plugins do not load here.
 -- Ctrl+A / opens Rex's native search; regular Cmd+C copies a native selection.
