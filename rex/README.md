@@ -18,7 +18,7 @@ at `~/poplink`. Theme and font are set in Rex Settings.
 
 | After Ctrl+A | Action |
 | --- | --- |
-| `[` | Vim copy mode |
+| `[`, PageUp | Copy mode; PageUp opens one page back |
 | `o` | Poplink file picker |
 | `c`, `n`, `p`, `1`–`9` | New, next, previous, or numbered tab |
 | `%`, `"` | Split right or down |
@@ -32,6 +32,10 @@ at `~/poplink`. Theme and font are set in Rex Settings.
 Ctrl+H/J/K/L navigates panes without the prefix; Neovim integration uses the
 `nvim` package.
 
-In copy mode, use Vim motions and `/` to search. Select with `v`, `V`, or Ctrl+V;
-`y` or Enter copies and closes. `q` exits. This views a frozen text snapshot;
-reopen for new output. If a popup does not take keyboard focus, click inside it.
+Copy mode keeps colors and covers just the active pane. Use `hjkl`, Ctrl+U/D,
+Ctrl+B/F, and `/` or `?` to navigate. `v`/Space, `V`, and Ctrl+V select;
+`y`/Enter copies and closes. Esc cancels selection; `q` closes. `Y` copies a
+whole wrapped line. Focus and zoom return to the source pane on exit.
+
+It still uses a frozen snapshot, starting at the latest output, not your mouse
+scroll position. Reopen to refresh. The viewer keeps up to 100,000 terminal rows.

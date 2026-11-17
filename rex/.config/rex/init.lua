@@ -141,19 +141,39 @@ bind("o", "poplink")
 rex.action {
   name = "vim_copy_mode",
   title = "Vim Copy Mode",
-  description = "Browse and copy a snapshot of terminal scrollback with Vim keys.",
-  run = function(ctx)
+  description = "Browse colored scrollback over the focused pane with Vim keys.",
+  args = { start = "string?" },
+  run = function(ctx, args)
     if not ctx.block_id then
       error("Copy mode requires a focused terminal", 0)
     end
+    local view, err = rex.session.view {}
+    if not view then error(err, 0) end
+    local function find(node)
+      if not node then return end
+      if node.block_id == ctx.block_id then return node.rect end
+      if node.split then return find(node.split.before) or find(node.split.after) end
+    end
+    local bounds, zoomed
+    for _, window in ipairs(view.windows or {}) do
+      for _, layer in ipairs(window.layers or {}) do
+        local rect = find(layer.layout)
+        if rect then
+          zoomed = window.zoomed_block_id == ctx.block_id
+          bounds = zoomed and { 0, 0, 1, 1 } or rect
+        end
+      end
+    end
+    if not bounds then error("Copy mode source pane is no longer visible", 0) end
     return popup(
-      'exec python3 "$HOME/.config/rex/scrollback.py" "$1"',
-      { 0, 0, 1, 1 },
-      { ctx.block_id }
+      'exec python3 "$HOME/.config/rex/scrollback.py" "$1" "$2" "$3"',
+      bounds,
+      { ctx.block_id, (args and args.start) or "bottom", zoomed and "zoomed" or "normal" }
     )
   end,
 }
 bind("[", "vim_copy_mode")
+bind("pageup", "vim_copy_mode", { start = "page-up" })
 
 rex.action {
   name = "project_notes",
