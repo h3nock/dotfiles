@@ -27,7 +27,8 @@ Developer Mode on) until it reaches Preview.
 | `h/j/k/l`, arrows | Focus pane |
 | `v` | Resize mode; Esc to finish |
 | `z`, Tab, `x` | Zoom, next pane, close pane |
-| `,`, `$`, `s` | Rename tab, rename session, switch session |
+| `,`, `$` | Rename tab, rename session |
+| `s` then `1`–`9`, `n`, `p`, `s` | Numbered session (as `rex ls` orders them), next, previous, or the session picker |
 | `N`, `A` | Project notes, btop |
 | `/`, `r`, `?` | Search, reload config, command palette |
 

@@ -11,7 +11,6 @@ bind("c", "client.tab.new")
 bind("n", "client.tab.next")
 bind("p", "client.tab.previous")
 bind(",", "client.tab.rename")
-bind("s", "session.switch")
 bind("shift+4", "session.rename")
 bind("shift+5", "pane.split.right") -- %
 bind("shift+'", "pane.split.down") -- "
@@ -29,6 +28,36 @@ bind("/", "client.find.open")
 
 for index = 1, 9 do
   bind(tostring(index), "client.tab.goto", { index = index })
+end
+
+-- Ctrl+A, s, then 1-9 shows that session, counted in the server's session
+-- order as `rex ls` prints it: creation order unless session.move changed it.
+-- Ctrl+A, s, s opens the picker: a key that starts a sequence can't also run
+-- an action by itself.
+rex.action {
+  name = "session_goto",
+  title = "Go to Session by Number",
+  description = "Show the session at a position in the session order, counting from 1.",
+  category = "Session",
+  args = { index = "integer" },
+  run = function(_, args)
+    local result, err = rex.call("session.list")
+    if not result then
+      error(err, 0)
+    end
+    local sessions = result.sessions or {}
+    local session = sessions[args.index]
+    if not session then
+      error(("No session %d; there are %d"):format(args.index, #sessions), 0)
+    end
+    rex.client.queue("session.select", { session_id = session.session_id })
+  end,
+}
+bind("s>s", "session.switch")
+bind("s>n", "session.next")
+bind("s>p", "session.previous")
+for index = 1, 9 do
+  bind("s>" .. index, "session_goto", { index = index })
 end
 
 local directions = {
