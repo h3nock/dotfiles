@@ -56,6 +56,9 @@ rex.action {
 bind("s>s", "session.switch")
 bind("s>n", "session.next")
 bind("s>p", "session.previous")
+bind("shift+l", "session.recent") -- L, tmux's last session
+-- tmux's last window is l, which focuses the pane to the right here.
+bind(";", "client.tab.recent.in_session")
 for index = 1, 9 do
   bind("s>" .. index, "session_goto", { index = index })
 end
