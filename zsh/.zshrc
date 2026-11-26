@@ -6,6 +6,9 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 
 # --- Environment Variables & PATH Setup ---
+# Keep only the first copy of each PATH entry, so a shell started from another
+# shell doesn't double PATH. Lookup order is unchanged: the first copy wins.
+typeset -U PATH path
 # Homebrew must be available before tools installed through brew are initialized.
 export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 
@@ -205,10 +208,15 @@ export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
 # bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
-
-bun-completions() {
-  [[ -s "$BUN_INSTALL/_bun" ]] && source "$BUN_INSTALL/_bun"
-}
+[[ -s "$BUN_INSTALL/_bun" ]] && source "$BUN_INSTALL/_bun"
 
 # Machine-local and experimental shell customizations.
 [[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
+
+# --- Tools added by installers ---
+if command -v daytona >/dev/null 2>&1 && [[ -r "$HOME/.daytona.completion_script.zsh" ]]; then
+  source "$HOME/.daytona.completion_script.zsh"
+fi
+# ~/.local/bin goes ahead of Homebrew and bun on purpose: its clipper, winpick,
+# python3.12, and bunx are the ones that run.
+export PATH="$HOME/.okc/bin:$HOME/.opencode/bin:$HOME/.local/bin:$PATH:$HOME/.lmstudio/bin"
