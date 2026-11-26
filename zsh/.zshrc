@@ -24,6 +24,9 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # Enable plugins: git and zsh-syntax-highlighting are already great;
 # adding zsh-autosuggestions for command completion suggestions.
 plugins=(git zsh-syntax-highlighting zsh-autosuggestions)
+# Keep the completion cache in ~/.cache instead of .zcompdump-* files in $HOME.
+ZSH_COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump-${ZSH_VERSION}"
+[[ -d ${ZSH_COMPDUMP:h} ]] || mkdir -p "${ZSH_COMPDUMP:h}"
 
 source "$ZSH/oh-my-zsh.sh"
 
