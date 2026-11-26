@@ -1,4 +1,5 @@
-# reload scripting-addition on dock restart
+# reload scripting-addition on dock restart. ~/scripts/yabai-update --setup
+# installs the sudo rule and keeps this binary built from upstream master.
 sudo -n /opt/homebrew/bin/yabai --load-sa
 yabai -m signal --add event=dock_did_restart action="sudo -n /opt/homebrew/bin/yabai --load-sa"
 

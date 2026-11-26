@@ -1,0 +1,210 @@
+#!/bin/zsh
+# Keeps yabai on upstream master (asmvik/yabai) with the scripting addition
+# taken from AhsanFazal/yabai, whose macOS 27 support upstream lacks. A launch
+# agent runs this every three hours and at login: when either branch moves, it
+# rebuilds, signs, installs, and restarts yabai, and puts the previous build
+# back if the new one doesn't start or can't load the scripting addition.
+#
+#   yabai-update             update if upstream or the fork has new commits
+#   yabai-update --force     rebuild and reinstall even if nothing changed
+#   yabai-update --rollback  go back to the build that ran before the last update
+#   yabai-update --setup     one-time, asks for your password: let sudo load and
+#                            unload the scripting addition of whichever build is
+#                            installed, update now, and install the launch agent
+set -euo pipefail
+zmodload zsh/system
+
+script=${0:A}
+src=$HOME/.local/src/yabai
+state=${XDG_STATE_HOME:-$HOME/.local/state}/yabai-update
+target=/opt/homebrew/bin/yabai
+upstream_url=https://github.com/asmvik/yabai.git
+fork_url=https://github.com/AhsanFazal/yabai.git
+# The fork's scripting addition: the payload loaded into Dock (src/osax) and the
+# code in yabai that talks to it (src/sa.m). Everything else comes from upstream.
+overlay=(src/osax src/sa.m)
+agent_label=com.local.yabai-update
+agent_plist=$HOME/Library/LaunchAgents/$agent_label.plist
+agent_log=$HOME/Library/Logs/yabai-update.log
+sudoers=/private/etc/sudoers.d/yabai
+export PATH=/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
+
+log() { print -r -- "$(date '+%F %T') $*"; }
+
+notify() {
+  osascript -e 'on run argv' -e 'display notification (item 1 of argv) with title "yabai"' \
+    -e 'end run' "$1" >/dev/null 2>&1 || true
+}
+
+# Notifies only when the failure differs from the previous one, so a problem
+# that persists across scheduled runs notifies once.
+fail() {
+  log "error: $1"
+  if [[ $(cat $state/last-error 2>/dev/null) != "$1" ]]; then
+    print -r -- "$1" >$state/last-error
+    notify "Update failed: $1"
+  fi
+  exit 1
+}
+
+sha() { shasum -a 256 $1 | cut -d' ' -f1; }
+
+# Installs $1 as yabai. Renaming over the file leaves a running yabai untouched.
+put() {
+  cp -p $1 $target.new
+  mv -f $target.new $target
+}
+
+wait_for_yabai() {
+  local attempt
+  for attempt in {1..20}; do
+    yabai -m query --spaces >/dev/null 2>&1 && return 0
+    sleep 0.5
+  done
+  return 1
+}
+
+# Restarts yabai on the installed build if it is running, then checks that it
+# answers and that sudo loads its scripting addition. With --reload, also
+# replaces the payload in Dock: yabai keeps a loaded payload whose version
+# matches its own, even when the payload's code changed.
+activate() {
+  local reload=${1:-} running=
+  pgrep -qx yabai && running=1
+  [[ -z $reload ]] || sudo -n $target --uninstall-sa || return 1
+  if [[ -n $running ]]; then
+    yabai --restart-service
+    wait_for_yabai || return 1
+  fi
+  if [[ -n $reload ]]; then
+    killall Dock
+    sleep 3 # yabai's dock_did_restart signal loads the payload first
+  fi
+  sudo -n $target --load-sa
+}
+
+update() {
+  local force=${1:-}
+  if [[ ! -d $src/.git ]]; then
+    git clone --quiet --origin upstream $upstream_url $src || fail "couldn't clone $upstream_url"
+  fi
+  git -C $src remote get-url fork >/dev/null 2>&1 || git -C $src remote add fork $fork_url
+  git -C $src fetch --quiet upstream && git -C $src fetch --quiet fork || fail "couldn't fetch from GitHub"
+
+  local up=$(git -C $src rev-parse upstream/master) fork=$(git -C $src rev-parse fork/master)
+  local wanted="$up $fork"
+  local installed=($(cat $state/installed 2>/dev/null))
+  if [[ -z $force && "${installed[1]:-} ${installed[2]:-}" == $wanted && ${installed[3]:-} == $(sha $target) ]]; then
+    log "up to date: upstream ${up:0:8}, fork ${fork:0:8}"
+    rm -f $state/last-error
+    return
+  fi
+  if [[ -z $force && $(cat $state/failed 2>/dev/null) == $wanted ]]; then
+    log "skipping upstream ${up:0:8} with fork ${fork:0:8}, which failed before"
+    return
+  fi
+  # Taking the fork's copy would discard upstream's own scripting-addition work.
+  local base=$(git -C $src merge-base $up $fork)
+  git -C $src diff --quiet $base $up -- $overlay ||
+    fail "upstream changed the scripting addition (src/osax, src/sa.m); check whether the fork's copy is still needed"
+  if [[ -n ${installed[2]:-} ]]; then
+    local skipped=$(git -C $src diff --name-only ${installed[2]} $fork -- . ${overlay/#/:(exclude)} 2>/dev/null)
+    [[ -z $skipped ]] || log "note: the fork also changed files this build takes from upstream: ${(f)skipped}"
+  fi
+
+  log "building upstream ${up:0:8} with the scripting addition from fork ${fork:0:8}"
+  git -C $src checkout --quiet --force -B build $up
+  git -C $src clean --quiet -fdx
+  git -C $src checkout $fork -- $overlay
+  if ! make -C $src install >$state/build.log 2>&1; then
+    print -r -- $wanted >$state/failed
+    fail "build failed; see $state/build.log"
+  fi
+  local built=$src/bin/yabai
+  local identity=${YABAI_SIGN_IDENTITY:-$(security find-identity -v -p codesigning | awk -F'"' '/Apple Development/ { print $2; exit }')}
+  [[ -n $identity ]] || fail "no Apple Development signing identity; set YABAI_SIGN_IDENTITY"
+  codesign --force --sign $identity $built >>$state/build.log 2>&1 || fail "couldn't sign the build as $identity"
+  # macOS grants Accessibility to this requirement, so a change would revoke it.
+  if [[ -z $force && $(codesign -d -r- $built 2>&1 | tail -n 1) != $(codesign -d -r- $target 2>&1 | tail -n 1) ]]; then
+    fail "the new build is signed differently and would lose Accessibility; run yabai-update --force and grant it again"
+  fi
+
+  # The first install replaces a build of unknown origin, so it reloads too.
+  local reload=--reload
+  if [[ -n ${installed[2]:-} ]] && git -C $src diff --quiet ${installed[2]} $fork -- src/osax; then
+    reload=
+  fi
+  [[ ! -e $target ]] || cp -p $target $state/yabai.previous
+  put $built
+  if ! activate $reload; then
+    [[ ! -e $state/yabai.previous ]] || { put $state/yabai.previous; activate --reload || true; }
+    print -r -- $wanted >$state/failed
+    fail "the new build didn't start or couldn't load the scripting addition; restored the previous build"
+  fi
+  print -r -- "$wanted $(sha $target)" >$state/installed
+  rm -f $state/failed $state/last-error
+  log "installed upstream ${up:0:8} with fork ${fork:0:8}"
+  notify "Updated to upstream ${up:0:8} with fork ${fork:0:8}"
+}
+
+rollback() {
+  [[ -e $state/yabai.previous ]] || fail "no previous build to go back to"
+  put $state/yabai.previous
+  activate --reload || fail "the previous build didn't start or couldn't load the scripting addition"
+  # Recording it as installed keeps it until upstream or the fork moves again.
+  local installed=($(cat $state/installed 2>/dev/null))
+  print -r -- "${installed[1]:-} ${installed[2]:-} $(sha $target)" >$state/installed
+  log "restored the previous build; it stays until upstream or the fork has new commits"
+}
+
+setup() {
+  local tmp=$(mktemp)
+  print -r -- "$USER ALL=(root) NOPASSWD: $target --load-sa, $target --uninstall-sa" >$tmp
+  visudo -cqf $tmp || fail "the sudoers rule didn't validate"
+  log "letting sudo run '$target --load-sa' and '--uninstall-sa' without a password; sudo asks for yours now"
+  sudo install -m 0440 -o root -g wheel $tmp $sudoers
+  rm -f $tmp
+
+  update --force
+
+  mkdir -p ${agent_plist:h} ${agent_log:h}
+  cat >$agent_plist <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>$agent_label</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>$script</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>10800</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>StandardOutPath</key>
+  <string>$agent_log</string>
+  <key>StandardErrorPath</key>
+  <string>$agent_log</string>
+</dict>
+</plist>
+EOF
+  launchctl bootout gui/$UID/$agent_label 2>/dev/null || true
+  launchctl bootstrap gui/$UID $agent_plist
+  log "the $agent_label launch agent checks every three hours and at login; it logs to $agent_log"
+}
+
+mkdir -p $state
+: >>$state/lock
+zsystem flock -t 0 $state/lock 2>/dev/null || { log "another update is running"; exit 0; }
+
+case ${1:-} in
+  '') update ;;
+  --force) update --force ;;
+  --rollback) rollback ;;
+  --setup) setup ;;
+  *) print -u2 "usage: yabai-update [--force | --rollback | --setup]"; exit 64 ;;
+esac
