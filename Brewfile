@@ -14,6 +14,7 @@ brew "tree"                   # Directory tree visualization
 brew "tmux"                   # Terminal multiplexer
 brew "btop"                   # Terminal resource monitor
 brew "neovim"                 # Your primary editor
+brew "tree-sitter-cli"        # Builds parsers for nvim-treesitter's main branch
 brew "zoxide"                 # Smart cd replacement
 brew "stow"                   # GNU Stow for dotfiles management 
 
