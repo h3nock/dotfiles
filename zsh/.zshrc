@@ -173,10 +173,12 @@ export PATH="$JAVA_HOME/bin:$PATH"
 export GOPATH="$HOME/go"
 export PATH="$PATH:/usr/local/go/bin:$GOPATH/bin"
 
-# --- Flutter Settings ---
-export FLUTTER_ROOT="$HOME/Developments/Flutter/flutter"
-export PATH="$FLUTTER_ROOT/bin:$PATH"
-export PATH="$PATH:$HOME/.pub-cache/bin"
+# --- Flutter Settings (only on machines where the SDK is installed) ---
+if [[ -d "$HOME/Developments/Flutter/flutter" ]]; then
+  export FLUTTER_ROOT="$HOME/Developments/Flutter/flutter"
+  export PATH="$FLUTTER_ROOT/bin:$PATH"
+  export PATH="$PATH:$HOME/.pub-cache/bin"
+fi
 
 bindkey -v
 # in vi insert mode, jk sends back to command (normal) mode
@@ -184,29 +186,29 @@ bindkey -M viins 'jk' vi-cmd-mode
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
-# --- Conda Setup ---
+# --- Conda Setup (only on machines where Miniforge is installed) ---
 # Keep conda available without activating base or running the shell hook in
 # every new terminal. The first `conda ...` command installs the shell function.
-export PATH="/opt/homebrew/Caskroom/miniforge/base/bin:$PATH"
+if [[ -x /opt/homebrew/Caskroom/miniforge/base/bin/conda ]]; then
+  export PATH="/opt/homebrew/Caskroom/miniforge/base/bin:$PATH"
 
-__remux_conda_init() {
-  unset -f conda
-  local __conda_setup
-  __conda_setup="$('/opt/homebrew/Caskroom/miniforge/base/bin/conda' 'shell.zsh' 'hook' 2>/dev/null)"
-  if [[ $? -eq 0 ]]; then
-    eval "$__conda_setup"
-  elif [[ -f "/opt/homebrew/Caskroom/miniforge/base/etc/profile.d/conda.sh" ]]; then
-    source "/opt/homebrew/Caskroom/miniforge/base/etc/profile.d/conda.sh"
-  else
-    export PATH="/opt/homebrew/Caskroom/miniforge/base/bin:$PATH"
-  fi
-  unset __conda_setup
-}
+  __remux_conda_init() {
+    unset -f conda
+    local __conda_setup
+    __conda_setup="$('/opt/homebrew/Caskroom/miniforge/base/bin/conda' 'shell.zsh' 'hook' 2>/dev/null)"
+    if [[ $? -eq 0 ]]; then
+      eval "$__conda_setup"
+    elif [[ -f "/opt/homebrew/Caskroom/miniforge/base/etc/profile.d/conda.sh" ]]; then
+      source "/opt/homebrew/Caskroom/miniforge/base/etc/profile.d/conda.sh"
+    fi
+    unset __conda_setup
+  }
 
-conda() {
-  __remux_conda_init
-  conda "$@"
-}
+  conda() {
+    __remux_conda_init
+    conda "$@"
+  }
+fi
 
 export MACOSX_DEPLOYMENT_TARGET=26.0
 export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
