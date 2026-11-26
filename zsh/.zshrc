@@ -9,10 +9,6 @@ fi
 # Homebrew must be available before tools installed through brew are initialized.
 export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 
-if command -v zoxide >/dev/null 2>&1; then
-  eval "$(zoxide init --cmd cd zsh)"
-fi
-
 # bookmark the iCloud Docs folder as ~cloud
 hash -d cloud="$HOME/Library/Mobile Documents/com~apple~CloudDocs"
 
@@ -49,18 +45,30 @@ alias cpp='cpp-15'
 # fzf command for opening multiple files in Neovim with a bat powred preview 
 alias nfzf='nvim $(fzf -m --preview="bat --color=always {}")'
 
-if command -v bat >/dev/null 2>&1; then
-    alias cat='bat --paging=never'
-fi 
-
 if command -v eza >/dev/null 2>&1; then
   export EZA_CONFIG_DIR="$HOME/.config/eza"
   unset EZA_COLORS EXA_COLORS LS_COLORS
 
-  alias ls='eza --color=auto'
   alias la='eza -alh'
   alias ll='eza -lH'
-  alias tree='eza --tree'
+fi
+
+# Claude Code (CLAUDECODE=1) copies this shell's functions and aliases into
+# the shells that run its commands, so cd, cat, ls, and tree stay standard
+# there. zoxide's cd loses its hook in those shells: it warns on every call and
+# jumps elsewhere when the path doesn't exist. eza rejects ls flags such as -t,
+# and its -d and -f mean something else than tree's.
+if [[ -z ${CLAUDECODE:-} ]]; then
+  if command -v zoxide >/dev/null 2>&1; then
+    eval "$(zoxide init --cmd cd zsh)"
+  fi
+  if command -v bat >/dev/null 2>&1; then
+    alias cat='bat --paging=never'
+  fi
+  if command -v eza >/dev/null 2>&1; then
+    alias ls='eza --color=auto'
+    alias tree='eza --tree'
+  fi
 fi
 
 # Shortcut for Obsidian symlink script
