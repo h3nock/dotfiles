@@ -61,7 +61,42 @@ The `install.sh` script can be used in two ways:
 - `zoxide` (a smarter `cd` command).
 - `tmux` (a terminal multiplexer).
 - `btop` (a terminal resource monitor).
+- `codex-meter` (Codex usage, quota, reset timing, token volume, estimated cost, and activity history).
+- `clipper` (macOS window screenshots from the terminal).
+- `winpick` (macOS window switching from the terminal).
+- `poplink` (open files mentioned in the current tmux pane).
+- `launch` (open a new app window on the current or selected yabai Space).
 - And many more (see the `Brewfile`).
+
+### Personal Tool Notes
+
+The `codex-meter` and `clipper` formulae come from `h3nock/tap`.
+If Homebrew refuses to load that tap, run:
+
+```bash
+brew trust h3nock/tap
+```
+
+`poplink` is installed from `https://github.com/h3nock/poplink.git` into
+`~/poplink`, and `~/poplink/bin` is added to the shell `PATH`.
+
+`winpick` is built from the `v0.1.0` source tag into `~/.local/bin` because its
+Homebrew formula currently requires a full Xcode install.
+
+Tmux workflows:
+
+- Prefix + `o`: open file paths from the current pane with `poplink`.
+- Prefix + `W`: pick and focus a macOS window with `winpick`.
+- Prefix + `C`: pick and copy a macOS window screenshot with `clipper`.
+
+App launcher workflow:
+
+- `launch`: pick an app and Space interactively.
+- `launch Ghostty`: open a new Ghostty window on the current Space.
+- `launch --space 2 "Brave Browser"`: open a new Brave window on Space 2.
+
+`clipper` needs Screen Recording permission for the terminal or hotkey app that
+launches it. `winpick` needs Accessibility permission for that app.
 
 ### Applications
 

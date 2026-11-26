@@ -2,12 +2,14 @@
 tap "jesseduffield/lazygit"
 tap "felixkratz/formulae"
 tap "koekeishiya/formulae"
+tap "h3nock/tap"
 
 # Core development tools
 brew "bat"                    # Better cat with syntax highlighting
 brew "eza"                    # Better ls with colors and icons
 brew "fzf"                    # Fuzzy finder - essential for workflow
 brew "ripgrep"                # Fast grep alternative
+brew "jq"                     # JSON processing for scripts
 brew "tree"                   # Directory tree visualization
 brew "tmux"                   # Terminal multiplexer
 brew "btop"                   # Terminal resource monitor
@@ -35,6 +37,10 @@ brew "cocoapods"              # iOS dependency manager
 brew "clang-format"           # C++ code formatting
 brew "glow"                   # Markdown viewer
 brew "firebase-cli"           # Firebase development
+
+# Personal workflow tools
+brew "h3nock/tap/codex-meter" # Codex usage dashboard
+brew "h3nock/tap/clipper"     # macOS window screenshots from the terminal
 
 # Window management (since you use these)
 brew "borders"                       # Window borders

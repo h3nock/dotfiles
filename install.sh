@@ -28,6 +28,66 @@ install_packages() {
     fi
 }
 
+install_personal_tools() {
+    if [[ "$(uname)" != "Darwin" ]]; then
+        return
+    fi
+
+    if ! command_exists git; then
+        echo "git is required to install poplink."
+        return 1
+    fi
+
+    local poplink_dir="$HOME/poplink"
+    local winpick_dir="$HOME/winpick"
+    local local_bin_dir="$HOME/.local/bin"
+
+    if [ -d "$poplink_dir/.git" ]; then
+        echo "poplink checkout already exists at $poplink_dir."
+    elif [ -e "$poplink_dir" ]; then
+        echo "Cannot install poplink: $poplink_dir exists but is not a git checkout."
+        return 1
+    else
+        echo "Installing poplink from source..."
+        if ! git clone https://github.com/h3nock/poplink.git "$poplink_dir"; then
+            echo "Failed to clone poplink."
+            return 1
+        fi
+    fi
+
+    if [ -x "$local_bin_dir/winpick" ] || command_exists winpick; then
+        echo "winpick already installed."
+        return
+    fi
+
+    if ! command_exists swift; then
+        echo "swift is required to build winpick."
+        return 1
+    fi
+
+    if [ -d "$winpick_dir/.git" ]; then
+        echo "winpick checkout already exists at $winpick_dir."
+    elif [ -e "$winpick_dir" ]; then
+        echo "Cannot install winpick: $winpick_dir exists but is not a git checkout."
+        return 1
+    else
+        echo "Installing winpick source..."
+        if ! git clone --branch v0.1.0 --depth 1 https://github.com/h3nock/winpick.git "$winpick_dir"; then
+            echo "Failed to clone winpick."
+            return 1
+        fi
+    fi
+
+    echo "Building winpick..."
+    if ! swift build --package-path "$winpick_dir" --configuration release --disable-sandbox --product winpick; then
+        echo "Failed to build winpick."
+        return 1
+    fi
+
+    mkdir -p "$local_bin_dir"
+    install -m 0755 "$winpick_dir/.build/release/winpick" "$local_bin_dir/winpick"
+}
+
 configure_macos() {
     if [[ "$(uname)" != "Darwin" ]]; then
         return
@@ -76,6 +136,7 @@ if [ "$STOW_ONLY" = true ]; then
     stow_dotfiles
 else
     install_packages
+    install_personal_tools || exit 1
     configure_macos
     build_helpers
     stow_dotfiles
