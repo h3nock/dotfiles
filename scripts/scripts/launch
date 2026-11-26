@@ -1,0 +1,327 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage:
+  launch                         Pick an app and target Space with fzf.
+  launch <app>                   Open a new app instance in the current Space.
+  launch --space <index> <app>   Open a new app instance on a specific Space.
+  launch current <app>           Open a new app instance in the current Space.
+  launch <space-index> <app>     Open a new app instance on a specific Space.
+  launch --apps                  List discovered apps.
+
+Examples:
+  launch Ghostty
+  launch --space 2 "Brave Browser"
+  launch current Obsidian
+  launch 3 Ghostty
+
+Notes:
+  Uses app-specific new-window commands when available, then yabai to move/focus.
+  Falls back to open -n; some macOS apps do not support that cleanly.
+EOF
+}
+
+require_commands() {
+    local missing=()
+    local cmd
+
+    for cmd in "$@"; do
+        if ! command -v "$cmd" >/dev/null 2>&1; then
+            missing+=("$cmd")
+        fi
+    done
+
+    if [ "${#missing[@]}" -gt 0 ]; then
+        printf 'launch: missing required command(s): %s\n' "${missing[*]}" >&2
+        exit 127
+    fi
+}
+
+lowercase() {
+    printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+app_name_from_path() {
+    local name
+
+    name="$(basename "$1")"
+    printf '%s\n' "${name%.app}"
+}
+
+app_rows() {
+    local roots=(
+        /Applications
+        /Applications/Utilities
+        /System/Applications
+        /System/Applications/Utilities
+        "$HOME/Applications"
+    )
+    local root
+
+    for root in "${roots[@]}"; do
+        [ -d "$root" ] || continue
+        find "$root" -maxdepth 3 -type d -name '*.app' -print 2>/dev/null
+    done | awk '
+        !seen[$0]++ {
+            path = $0
+            name = path
+            sub(/^.*\//, "", name)
+            sub(/\.app$/, "", name)
+            printf "%s\t%s\n", name, path
+        }
+    '
+}
+
+pick_app_path() {
+    require_commands fzf
+
+    app_rows \
+        | sort -f \
+        | fzf \
+            --ansi \
+            --border \
+            --height=80% \
+            --layout=reverse \
+            --delimiter=$'\t' \
+            --with-nth=1 \
+            --prompt='app> ' \
+            --header='enter open | type to filter apps' \
+            --preview='printf "%s\n%s\n" {1} {2}' \
+            --preview-window='down:3:wrap' \
+        | awk -F '\t' '{print $2}'
+}
+
+pick_space() {
+    require_commands yabai jq fzf
+
+    local current_space
+    current_space="$(yabai -m query --spaces --space | jq -r '.index')"
+
+    yabai -m query --spaces \
+        | jq -r --arg current "$current_space" '
+            sort_by(.index)[]
+            | [
+                .index,
+                (if (.index | tostring) == $current then "current" else "space" end),
+                ((.windows // []) | length | tostring) + " window(s)"
+              ]
+            | @tsv
+          ' \
+        | fzf \
+            --ansi \
+            --border \
+            --height=40% \
+            --layout=reverse \
+            --delimiter=$'\t' \
+            --with-nth='1,2,3' \
+            --prompt='space> ' \
+            --header='enter target Space' \
+        | awk -F '\t' '{print $1}'
+}
+
+resolve_app_path() {
+    local query="$*"
+    local query_lower
+    local query_without_suffix
+    local app_name app_path app_name_lower
+    local matches=()
+
+    query_lower="$(lowercase "$query")"
+    query_without_suffix="${query_lower%.app}"
+
+    if [ -d "$query" ] && [[ "$query" == *.app ]]; then
+        printf '%s\n' "$query"
+        return
+    fi
+
+    if [ -d "${query}.app" ]; then
+        printf '%s\n' "${query}.app"
+        return
+    fi
+
+    while IFS=$'\t' read -r app_name app_path; do
+        app_name_lower="$(lowercase "$app_name")"
+        if [ "$app_name_lower" = "$query_lower" ] || [ "$app_name_lower" = "$query_without_suffix" ]; then
+            printf '%s\n' "$app_path"
+            return
+        fi
+    done < <(app_rows)
+
+    while IFS=$'\t' read -r app_name app_path; do
+        app_name_lower="$(lowercase "$app_name")"
+        if [[ "$app_name_lower" == *"$query_lower"* ]]; then
+            matches+=("${app_name}"$'\t'"${app_path}")
+        fi
+    done < <(app_rows)
+
+    if [ "${#matches[@]}" -eq 1 ]; then
+        printf '%s\n' "${matches[0]#*$'\t'}"
+        return
+    fi
+
+    if [ "${#matches[@]}" -gt 1 ]; then
+        if command -v fzf >/dev/null 2>&1; then
+            printf '%s\n' "${matches[@]}" \
+                | sort -f \
+                | fzf \
+                    --border \
+                    --height=60% \
+                    --layout=reverse \
+                    --delimiter=$'\t' \
+                    --with-nth=1 \
+                    --prompt='app match> ' \
+                | awk -F '\t' '{print $2}'
+            return
+        fi
+
+        printf 'launch: multiple apps match: %s\n' "$query" >&2
+        printf '%s\n' "${matches[@]}" | awk -F '\t' '{print "  " $1}' >&2
+        return 1
+    fi
+
+    printf 'launch: app not found: %s\n' "$query" >&2
+    return 1
+}
+
+new_window_id() {
+    local app_name="$1"
+    local before_file="$2"
+    local window_id
+
+    while IFS= read -r window_id; do
+        if ! grep -qx -- "$window_id" "$before_file"; then
+            printf '%s\n' "$window_id"
+            return
+        fi
+    done < <(yabai -m query --windows | jq -r --arg app "$app_name" '.[] | select(.app == $app) | .id')
+
+    return 1
+}
+
+trigger_new_window() {
+    local app_name="$1"
+    local app_path="$2"
+
+    case "$app_name" in
+        Ghostty)
+            osascript -e 'tell application "Ghostty" to new window'
+            ;;
+        *)
+            open -n "$app_path"
+            ;;
+    esac
+}
+
+open_app() {
+    local target_space="$1"
+    local app_path="$2"
+    local app_name
+
+    require_commands yabai jq open mktemp grep osascript sleep
+
+    app_name="$(app_name_from_path "$app_path")"
+
+    local current_space
+    current_space="$(yabai -m query --spaces --space | jq -r '.index')"
+
+    if [ "$target_space" = "current" ]; then
+        target_space="$current_space"
+    elif ! [[ "$target_space" =~ ^[0-9]+$ ]]; then
+        printf 'launch: Space must be a number or current: %s\n' "$target_space" >&2
+        return 1
+    elif ! yabai -m query --spaces | jq -e --argjson target "$target_space" 'any(.index == $target)' >/dev/null; then
+        printf 'launch: Space does not exist: %s\n' "$target_space" >&2
+        return 1
+    fi
+
+    if [ "$target_space" != "$current_space" ]; then
+        yabai -m space --focus "$target_space"
+    fi
+
+    local before_file
+    before_file="$(mktemp -t launch-before.XXXXXX)"
+    # The trap removes itself: a RETURN trap stays set after this function
+    # returns, and when main returned it ran again with before_file unset.
+    trap 'rm -f "$before_file"; trap - RETURN' RETURN
+
+    yabai -m query --windows | jq -r --arg app "$app_name" '.[] | select(.app == $app) | .id' > "$before_file"
+
+    printf 'launch: opening %s on Space %s\n' "$app_name" "$target_space"
+    trigger_new_window "$app_name" "$app_path"
+
+    local window_id=""
+    local attempt
+    for attempt in {1..30}; do
+        if window_id="$(new_window_id "$app_name" "$before_file")"; then
+            break
+        fi
+        sleep 0.15
+    done
+
+    if [ -z "$window_id" ]; then
+        window_id="$(yabai -m query --windows | jq -r --arg app "$app_name" '[.[] | select(.app == $app)] | sort_by(.id) | last.id // empty')"
+    fi
+
+    if [ -n "$window_id" ]; then
+        yabai -m window "$window_id" --space "$target_space" \
+            || printf 'launch: warning: could not move window %s to Space %s\n' "$window_id" "$target_space" >&2
+
+        current_space="$(yabai -m query --spaces --space | jq -r '.index')"
+        if [ "$current_space" != "$target_space" ]; then
+            yabai -m space --focus "$target_space"
+        fi
+
+        yabai -m window "$window_id" --focus \
+            || printf 'launch: warning: could not focus window %s\n' "$window_id" >&2
+        printf 'launch: ready: %s on Space %s\n' "$app_name" "$target_space"
+        return
+    fi
+
+    printf 'launch: opened %s, but yabai did not report a window for it\n' "$app_name" >&2
+}
+
+main() {
+    local target_space app_path
+
+    case "${1:-}" in
+        -h|--help)
+            usage
+            return
+            ;;
+        --apps)
+            app_rows | sort -f
+            return
+            ;;
+        --space)
+            if [ "$#" -lt 3 ]; then
+                usage >&2
+                return 2
+            fi
+            target_space="$2"
+            shift 2
+            app_path="$(resolve_app_path "$@")" || return
+            open_app "$target_space" "$app_path"
+            return
+            ;;
+    esac
+
+    if [ "$#" -eq 0 ]; then
+        app_path="$(pick_app_path)" || return
+        [ -n "$app_path" ] || return
+        target_space="$(pick_space)" || return
+        [ -n "$target_space" ] || return
+    elif [ "$#" -ge 2 ]; then
+        target_space="$1"
+        shift
+        app_path="$(resolve_app_path "$@")" || return
+    else
+        target_space="current"
+        app_path="$(resolve_app_path "$@")" || return
+    fi
+
+    open_app "$target_space" "$app_path"
+}
+
+main "$@"
