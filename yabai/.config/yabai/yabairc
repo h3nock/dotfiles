@@ -66,3 +66,6 @@ border_blacklist="System Settings,Calculator,Karabiner-Elements,QuickTime Player
   blacklist="$border_blacklist" &
 
 [ -r "$HOME/.yabairc.local" ] && source "$HOME/.yabairc.local"
+
+# Re-apply rules to windows that were already open when yabai started.
+yabai -m rule --apply
