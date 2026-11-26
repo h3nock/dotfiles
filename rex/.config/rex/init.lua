@@ -205,5 +205,21 @@ rex.action {
 }
 bind("shift+a", "activity_monitor")
 
+-- rexume (~/rexume): save every pane's screen and scrollback, so a restart
+-- brings them back. Agent conversations are tracked on their own; before a
+-- planned restart, `rexume stop` saves and stops the server.
+rex.action {
+  name = "rexume_save",
+  title = "Save Panes",
+  description = "Save every pane's screen and scrollback with rexume.",
+  run = function()
+    return popup(
+      "/Users/macbook/.local/bin/rexume save && sleep 1 || { print; read -sk1 '?rexume save failed; press a key '; }",
+      { 0.3, 0.4, 0.4, 0.2 }
+    )
+  end,
+}
+bind("shift+s", "rexume_save") -- S
+
 -- tmux-pins and TPM plugins do not load here. Ctrl+A / opens Rex's native
 -- search; regular Cmd+C copies a native selection.
