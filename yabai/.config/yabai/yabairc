@@ -52,9 +52,12 @@ yabai -m rule --add app="^Spotify$" manage=off
 yabai -m rule --add app="^Telegram$" manage=off
 yabai -m rule --add app="^Finder$" manage=off
 yabai -m rule --add app="^TickTick$" manage=off
+yabai -m rule --add app="^Kbolt Palette$" manage=off
+yabai -m rule --add app="^Screen Studio$" manage=off
+yabai -m rule --add app="^Simulator$" manage=off
 
 # draw Catppuccin Mocha borders for the tiled workspace, excluding floating-style apps
-border_blacklist="System Settings,Calculator,Karabiner-Elements,QuickTime Player,Spotify,Telegram,Finder,TickTick,Simulator"
+border_blacklist="System Settings,Calculator,Karabiner-Elements,QuickTime Player,Spotify,Telegram,Finder,TickTick,Kbolt Palette,Screen Studio,Simulator"
 /opt/homebrew/bin/borders \
   style=round \
   order=b \
