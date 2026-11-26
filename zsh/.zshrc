@@ -16,7 +16,9 @@ fi
 # shell doesn't double PATH. Lookup order is unchanged: the first copy wins.
 typeset -U PATH path
 # Homebrew must be available before tools installed through brew are initialized.
-export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+# ~/scripts holds these dotfiles' scripts, such as launch and yabai-update, and
+# ~/poplink/bin holds poplink. ~/.local/bin is added at the end of this file.
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$HOME/scripts:$HOME/poplink/bin:$PATH"
 
 # bookmark the iCloud Docs folder as ~cloud
 hash -d cloud="$HOME/Library/Mobile Documents/com~apple~CloudDocs"
