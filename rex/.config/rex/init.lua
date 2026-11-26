@@ -56,9 +56,11 @@ rex.action {
 bind("s>s", "session.switch")
 bind("s>n", "session.next")
 bind("s>p", "session.previous")
-bind("shift+l", "session.recent") -- L, tmux's last session
--- tmux's last window is l, which focuses the pane to the right here.
-bind(";", "client.tab.recent.in_session")
+-- Back and forward through the panes you've been in, across tabs and
+-- sessions, like a browser. L, tmux's last session, steps back; ;, the key to
+-- its right, steps forward again.
+bind("shift+l", "client.navigate.back")
+bind(";", "client.navigate.forward")
 for index = 1, 9 do
   bind("s>" .. index, "session_goto", { index = index })
 end

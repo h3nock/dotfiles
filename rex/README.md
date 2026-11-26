@@ -29,7 +29,7 @@ Developer Mode on) until it reaches Preview.
 | `z`, Tab, `x` | Zoom, next pane, close pane |
 | `,`, `$` | Rename tab, rename session |
 | `s` then `1`–`9`, `n`, `p`, `s` | Numbered session (as `rex ls` orders them), next, previous, or the session picker |
-| `;`, `L` | Last tab in this session, last session; press again to return |
+| `L`, `;` | Back to the pane you were in before, in any tab or session; forward again |
 | `N`, `A` | Project notes, btop |
 | `/`, `r`, `?` | Search, reload config, command palette |
 
