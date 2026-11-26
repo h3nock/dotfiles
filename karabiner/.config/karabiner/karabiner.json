@@ -66,8 +66,78 @@
                         ]
                     },
                     {
-                        "description": "Right Arrow: tap for timed Right Control, hold for repeating Right Arrow (internal keyboard only)",
+                        "description": "Backslash prefix: next key within 300ms gets Right Control, otherwise Backslash (internal keyboard only)",
                         "manipulators": [
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "backslash_control_prefix",
+                                        "type": "variable_if",
+                                        "value": true
+                                    },
+                                    {
+                                        "identifiers": [
+                                            {
+                                                "is_keyboard": true,
+                                                "product_id": 641,
+                                                "vendor_id": 1452
+                                            }
+                                        ],
+                                        "type": "device_if"
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "backslash"
+                                },
+                                "to": [
+                                    {
+                                        "set_variable": {
+                                            "name": "backslash_control_prefix",
+                                            "value": false
+                                        }
+                                    },
+                                    {
+                                        "key_code": "backslash"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "backslash_control_prefix",
+                                        "type": "variable_if",
+                                        "value": true
+                                    },
+                                    {
+                                        "identifiers": [
+                                            {
+                                                "is_keyboard": true,
+                                                "product_id": 641,
+                                                "vendor_id": 1452
+                                            }
+                                        ],
+                                        "type": "device_if"
+                                    }
+                                ],
+                                "from": {
+                                    "any": "key_code",
+                                    "modifiers": { "optional": ["any"] }
+                                },
+                                "to": [
+                                    {
+                                        "set_variable": {
+                                            "name": "backslash_control_prefix",
+                                            "value": false
+                                        }
+                                    },
+                                    {
+                                        "from_event": true,
+                                        "modifiers": ["right_control"]
+                                    }
+                                ],
+                                "type": "basic"
+                            },
                             {
                                 "conditions": [
                                     {
@@ -81,14 +151,48 @@
                                         "type": "device_if"
                                     }
                                 ],
-                                "from": { "key_code": "right_arrow" },
-                                "to_if_alone": [
+                                "from": {
+                                    "key_code": "backslash"
+                                },
+                                "to": [
                                     {
-                                        "hold_down_milliseconds": 700,
-                                        "key_code": "right_control"
+                                        "set_variable": {
+                                            "name": "backslash_control_prefix",
+                                            "value": true
+                                        }
                                     }
                                 ],
-                                "to_if_held_down": [{ "key_code": "right_arrow" }],
+                                "to_delayed_action": {
+                                    "to_if_invoked": [
+                                        {
+                                            "key_code": "backslash",
+                                            "conditions": [
+                                                {
+                                                    "name": "backslash_control_prefix",
+                                                    "type": "variable_if",
+                                                    "value": true
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "set_variable": {
+                                                "name": "backslash_control_prefix",
+                                                "value": false
+                                            }
+                                        }
+                                    ],
+                                    "to_if_canceled": [
+                                        {
+                                            "set_variable": {
+                                                "name": "backslash_control_prefix",
+                                                "value": false
+                                            }
+                                        }
+                                    ]
+                                },
+                                "parameters": {
+                                    "basic.to_delayed_action_delay_milliseconds": 300
+                                },
                                 "type": "basic"
                             }
                         ]
