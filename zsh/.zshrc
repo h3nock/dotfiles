@@ -1,3 +1,9 @@
+# --- rexume: bring Rex panes back after a restart (~/rexume) ---
+# Before the instant prompt: a restored pane redraws its saved screen and
+# reopens its agent conversation or program.
+[[ -n $REX_BLOCK && -o interactive && -x /Users/macbook/.local/bin/rexume ]] &&
+  source <(/Users/macbook/.local/bin/rexume shell-init)
+
 # --- Powerlevel10k Instant Prompt ---
 # Keep this near the top so new tmux panes can paint a prompt before slower
 # optional tooling initializes.
