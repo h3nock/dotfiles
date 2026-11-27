@@ -1,11 +1,12 @@
 #!/bin/zsh
 # Keeps yabai on upstream master (asmvik/yabai) with the scripting addition
-# taken from AhsanFazal/yabai, whose macOS 27 support upstream lacks. A launch
-# agent runs this every three hours and at login: when either branch moves, it
-# rebuilds, signs, installs, and restarts yabai, and puts the previous build
-# back if the new one doesn't start or can't load the scripting addition.
+# taken from AhsanFazal/yabai, whose macOS 27 support upstream lacks, plus the
+# fixes in yabai-patches/ next to this script. A launch agent runs this every
+# three hours and at login: when either branch or a patch changes, it rebuilds,
+# signs, installs, and restarts yabai, and puts the previous build back if the
+# new one doesn't start or can't load the scripting addition.
 #
-#   yabai-update             update if upstream or the fork has new commits
+#   yabai-update             update if upstream, the fork, or a patch changed
 #   yabai-update --force     rebuild and reinstall even if nothing changed
 #   yabai-update --rollback  go back to the build that ran before the last update
 #   yabai-update --setup     one-time, asks for your password: let sudo load and
@@ -23,6 +24,9 @@ fork_url=https://github.com/AhsanFazal/yabai.git
 # The fork's scripting addition: the payload loaded into Dock (src/osax) and the
 # code in yabai that talks to it (src/sa.m). Everything else comes from upstream.
 overlay=(src/osax src/sa.m)
+# Fixes upstream doesn't have yet, applied on top of the overlay. Each one says
+# where it came from and when it can be deleted.
+patches=(${script:h}/yabai-patches/*.patch(N))
 agent_label=com.local.yabai-update
 agent_plist=$HOME/Library/LaunchAgents/$agent_label.plist
 agent_log=$HOME/Library/Logs/yabai-update.log
@@ -93,9 +97,13 @@ update() {
   git -C $src fetch --quiet upstream && git -C $src fetch --quiet fork || fail "couldn't fetch from GitHub"
 
   local up=$(git -C $src rev-parse upstream/master) fork=$(git -C $src rev-parse fork/master)
-  local wanted="$up $fork"
+  local patch_sum=none
+  if (( $#patches )); then patch_sum=$(cat $patches | shasum -a 256 | cut -d' ' -f1); fi
+  local wanted="$up $fork $patch_sum"
+  # Holds the upstream and fork commits, the patches' hash, and the hash of the
+  # installed binary.
   local installed=($(cat $state/installed 2>/dev/null))
-  if [[ -z $force && "${installed[1]:-} ${installed[2]:-}" == $wanted && ${installed[3]:-} == $(sha $target) ]]; then
+  if [[ -z $force && "${installed[1]:-} ${installed[2]:-} ${installed[3]:-}" == $wanted && ${installed[4]:-} == $(sha $target) ]]; then
     log "up to date: upstream ${up:0:8}, fork ${fork:0:8}"
     rm -f $state/last-error
     return
@@ -117,6 +125,18 @@ update() {
   git -C $src checkout --quiet --force -B build $up
   git -C $src clean --quiet -fdx
   git -C $src checkout $fork -- $overlay
+  local patch
+  for patch in $patches; do
+    if git -C $src apply --check $patch 2>/dev/null; then
+      git -C $src apply $patch
+      log "applied ${patch:t}"
+    elif git -C $src apply --check --reverse $patch 2>/dev/null; then
+      log "note: upstream already has ${patch:t}; it can be deleted"
+      notify "Upstream already has ${patch:t}; it can be deleted"
+    else
+      fail "${patch:t} no longer applies to upstream ${up:0:8}; check whether upstream fixed it another way"
+    fi
+  done
   if ! make -C $src install >$state/build.log 2>&1; then
     print -r -- $wanted >$state/failed
     fail "build failed; see $state/build.log"
@@ -157,10 +177,11 @@ rollback() {
   [[ -e $state/yabai.previous ]] || fail "no previous build to go back to"
   put $state/yabai.previous
   activate --reload || fail "the previous build didn't start or couldn't load the scripting addition"
-  # Recording it as installed keeps it until upstream or the fork moves again.
+  # Recording it as installed keeps it until upstream, the fork, or a patch
+  # changes.
   local installed=($(cat $state/installed 2>/dev/null))
-  print -r -- "${installed[1]:-} ${installed[2]:-} $(sha $target)" >$state/installed
-  log "restored the previous build; it stays until upstream or the fork has new commits"
+  print -r -- "${installed[1]:-} ${installed[2]:-} ${installed[3]:-} $(sha $target)" >$state/installed
+  log "restored the previous build; it stays until upstream, the fork, or a patch changes"
 }
 
 setup() {
