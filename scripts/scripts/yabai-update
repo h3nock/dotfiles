@@ -55,26 +55,27 @@ put() {
   mv -f $target.new $target
 }
 
+# Waits up to $1 seconds for yabai to answer; a restart can take over ten.
 wait_for_yabai() {
-  local attempt
-  for attempt in {1..20}; do
-    yabai -m query --spaces >/dev/null 2>&1 && return 0
+  local deadline=$(( SECONDS + $1 ))
+  until yabai -m query --spaces >/dev/null 2>&1; do
+    (( SECONDS < deadline )) || return 1
     sleep 0.5
   done
-  return 1
 }
 
 # Restarts yabai on the installed build if it is running, then checks that it
-# answers and that sudo loads its scripting addition. With --reload, also
-# replaces the payload in Dock: yabai keeps a loaded payload whose version
-# matches its own, even when the payload's code changed.
+# answers within $2 seconds (30 by default) and that sudo loads its scripting
+# addition. With --reload as $1, also replaces the payload in Dock: yabai keeps
+# a loaded payload whose version matches its own, even when the payload's code
+# changed.
 activate() {
-  local reload=${1:-} running=
+  local reload=${1:-} wait=${2:-30} running=
   pgrep -qx yabai && running=1
   [[ -z $reload ]] || sudo -n $target --uninstall-sa || return 1
   if [[ -n $running ]]; then
     yabai --restart-service
-    wait_for_yabai || return 1
+    wait_for_yabai $wait || return 1
   fi
   if [[ -n $reload ]]; then
     killall Dock
@@ -124,9 +125,14 @@ update() {
   local identity=${YABAI_SIGN_IDENTITY:-$(security find-identity -v -p codesigning | awk -F'"' '/Apple Development/ { print $2; exit }')}
   [[ -n $identity ]] || fail "no Apple Development signing identity; set YABAI_SIGN_IDENTITY"
   codesign --force --sign $identity $built >>$state/build.log 2>&1 || fail "couldn't sign the build as $identity"
-  # macOS grants Accessibility to this requirement, so a change would revoke it.
-  if [[ -z $force && $(codesign -d -r- $built 2>&1 | tail -n 1) != $(codesign -d -r- $target 2>&1 | tail -n 1) ]]; then
-    fail "the new build is signed differently and would lose Accessibility; run yabai-update --force and grant it again"
+  # macOS grants Accessibility to this requirement, so a change revokes it. Only
+  # --force and --setup go ahead, and they give you time to allow it again.
+  local wait=30
+  if [[ $(codesign -d -r- $built 2>&1 | tail -n 1) != $(codesign -d -r- $target 2>&1 | tail -n 1) ]]; then
+    [[ -n $force ]] || fail "the new build is signed differently and would lose Accessibility; run yabai-update --force and grant it again"
+    wait=180
+    log "the new build is signed differently, so macOS needs Accessibility for it again: in System Settings > Privacy & Security > Accessibility, remove yabai, add $target, and turn it on. Waiting up to three minutes."
+    notify "Allow yabai again in System Settings > Privacy & Security > Accessibility"
   fi
 
   # The first install replaces a build of unknown origin, so it reloads too.
@@ -136,7 +142,7 @@ update() {
   fi
   [[ ! -e $target ]] || cp -p $target $state/yabai.previous
   put $built
-  if ! activate $reload; then
+  if ! activate "$reload" $wait; then
     [[ ! -e $state/yabai.previous ]] || { put $state/yabai.previous; activate --reload || true; }
     print -r -- $wanted >$state/failed
     fail "the new build didn't start or couldn't load the scripting addition; restored the previous build"
